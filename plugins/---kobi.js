@@ -3,7 +3,7 @@ import axios from 'axios';
 const handler = async (m, { conn, usedPrefix, command, text }) => {
   try {
     if (!text) return m.reply(`Masukan prompt! \n\nContoh: \n${usedPrefix + command} Selamat pagi`);
-    await conn.sendMessage(m.chat, { text: 'Loading...' }, { quoted: m });
+    await conn.sendMessage(m.chat, { text: 'إنتظر...' }, { quoted: m });
     let result = await luminAi(text, m.sender, `إسمك هو محمد، وصانعك هو EL KOBY، وخصمك هو  ${await conn.getName(m.sender)}, أجب بمتعة وأستخدم في إجابتك رموز تعبيرية `);
     await m.reply(result);
   } catch (error) {
