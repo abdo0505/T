@@ -12,7 +12,7 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
 
  const yt_play = await search(args.join(" "));
 
- if (command === 'pay') {
+ if (command === 'play') {
  const q = '128kbps';
  const v = yt_play[0].url;
  const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v));
@@ -41,7 +41,7 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
  }
 };
 
-handler.command = ['pay'];
+handler.command = ['play'];
 
 export default handler;
 
