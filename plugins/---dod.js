@@ -4,7 +4,7 @@ let handler = async (m, { conn, text, args, command, usedPrefix }) => { 
 
     let url = args[0]
     if (!url) {
-        await conn.sendMessage(m.chat, { text: `[!] *wrong input*\n> Ex: ${usedPrefix + command} url\n\nSupport: YT, TT, IG, FB` }, { quoted: m })
+        await conn.sendMessage(m.chat, { text: `*\n> Ex: ${usedPrefix + command} url\n\nSupport: YT, TT, IG, FB` }, { quoted: m })
         return
     }
     let type
