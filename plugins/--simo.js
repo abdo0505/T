@@ -5,7 +5,7 @@ let previousMessages = [];
 const handler = async (m, { text, usedPrefix, command, conn }) => {
   try {
     if (!text) {
-      throw "Masukkan pertanyaan!\n\n*Contoh:* Siapa presiden Indonesia?";
+      throw " ";
     }
 
     let { key } = await conn.sendMessage(m.chat, {
