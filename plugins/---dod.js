@@ -10,13 +10,13 @@ let handler = async (m, { conn, text, args, command, usedPrefix }) => { 
     let type
 
     if (url.includes('youtube.com')) {
-        type = 'YT'
+        type = 'يوتيب'
     } else if (url.includes('vt.tiktok.com')) {
-        type = 'TT'
+        type = 'تيكتوك'
     } else if (url.includes('instagram.com')) {
-        type = 'IG'
+        type = 'انستغرام'
     } else if (url.includes('facebook.com')) {
-        type = 'FB'
+        type = 'فيسبةك'
     } else {       
         return
     }
