@@ -1,51 +1,88 @@
 import yts from "yt-search";
-import { youtubedl, youtubedlv2 } from '@bochilteam/scraper';
+import fetch from 'node-fetch';
 
-let handler = async (m, { conn, command, args, text, usedPrefix }) => {
- let q, v, yt, dl_url, ttl, size;
+const handler = async (m, { conn, text }) => {
+    if (!text) throw 'يرجى إدخال عنوان أو رابط يوتيوب!';
 
- if (!text) throw `> ⓘ يرجى إدخال الأمر بشكل صحيح.\n> ${usedPrefix + command} اسم الأغنية أو البحث`;
+    try {
+        const search = await yts(text);
+        if (!search || !search.all || search.all.length === 0) {
+            throw 'لم يتم العثور على نتائج لطلبك!';
+        }
 
- try {
- const waitMessage = await conn.sendMessage(m.chat, { react: { text: '🎧', key: m.key } });
- await m.reply(wait);
+        const video = search.all[0];
+        const videoUrl = video.url;
+        const videoTitle = video.title;
+        const videoThumbnail = video.thumbnail;
 
- const yt_play = await search(args.join(" "));
+        // إرسال المعلومات الأولية: العنوان، الرابط، والصورة المصغرة
+        await conn.sendMessage(m.chat, {
+            image: { url: videoThumbnail },
+            caption: `*العنوان:* ${videoTitle}\n*الرابط:* ${videoUrl}`,
+            contextInfo: {
+                externalAdReply: {
+                    showAdAttribution: true,
+                    title: videoTitle,
+                    sourceUrl: videoUrl,
+                    thumbnailUrl: videoThumbnail,
+                }
+            }
+        }, { quoted: m });
 
- if (command === 'play') {
- const q = '128kbps';
- const v = yt_play[0].url;
- const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v));
- const dl_url = await yt.audio[q].download();
- const ttl = await yt.title;
- const size = await yt.audio[q].fileSizeH;
+        // تنزيل الفيديو باستخدام الدالة ytdl
+        const response = await ytdl(videoUrl);
+        const videoDownloadUrl = response.data.mp4;
+        if (!videoDownloadUrl) {
+            throw 'فشل في استرداد رابط الفيديو!';
+        }
 
- // إرسال الصورة المصغرة والعنوان
- const thumbMessage = await conn.sendMessage(m.chat, {
- image: { url: yt_play[0].thumbnail },
- caption: `📹 *${ttl}*`
- }, { quoted: m });
+        // إرسال الفيديو بصيغة mp4
+        await conn.sendMessage(m.chat, {
+            video: { url: videoDownloadUrl },
+            mimetype: "video/mp4",
+            fileName: "video.mp4",
+            caption: `*العنوان:* ${videoTitle}`,
+            contextInfo: {
+                forwardingScore: 100,
+                isForwarded: false,
+                externalAdReply: {
+                    showAdAttribution: true,
+                    title: videoTitle,
+                    sourceUrl: videoUrl,
+                    thumbnailUrl: videoThumbnail,
+                }
+            }
+        }, { quoted: m });
 
- // تشغيل المقطع الصوتي مباشرة عبر رابط التحميل
- await conn.sendMessage(m.chat, { audio: { url: dl_url }, mimetype: 'audio/mp4', ptt: true }, { quoted: m });
-
- // حذف الرسائل بعد دقيقة واحدة
- setTimeout(async () => {
-     await conn.sendMessage(m.chat, { delete: waitMessage.key });
-     await conn.sendMessage(m.chat, { delete: thumbMessage.key });
- }, 60000); // 60000 ميلي ثانية = 1 دقيقة
- }
- } catch (error) {
- console.error(error);
- throw 'حدث خطأ أثناء البحث عن الأغنية.';
- }
+    } catch (e) {
+        conn.reply(m.chat, `*خطأ:* ${e.message}`, m);
+    }
 };
 
 handler.command = ['play'];
+handler.help = ['play'];
+handler.tags = ['downloader'];
+handler.exp = 0;
+handler.limit = false;
+handler.premium = false;
 
 export default handler;
 
-async function search(query, options = {}) {
- const search = await yts.search({ query, hl: "it", gl: "IT", ...options });
- return search.videos;
+async function ytdl(url) {
+    const response = await fetch('https://shinoa.us.kg/api/download/ytdl', {
+        method: 'POST',
+        headers: {
+            'accept': '*/*',
+            'api_key': 'free',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: url })
+    });
+
+    if (!response.ok) {
+        throw new Error(`فشل في تحميل الفيديو: HTTP status ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
 }
