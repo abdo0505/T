@@ -2,65 +2,57 @@ import yts from "yt-search";
 import fetch from 'node-fetch';
 
 const handler = async (m, { conn, text }) => {
-    if (!text) throw 'يرجى إدخال عنوان أو رابط يوتيوب!';
+    if (!text) throw 'Please enter a YouTube title or link!';
 
     try {
         const search = await yts(text);
         if (!search || !search.all || search.all.length === 0) {
-            throw 'لم يتم العثور على نتائج لطلبك!';
+            throw 'No results found for your query!';
         }
 
-        const video = search.all[0];
-        const videoUrl = video.url;
-        const videoTitle = video.title;
-        const videoThumbnail = video.thumbnail;
+        const videoInfo = search.all[0];
+        const videoUrl = videoInfo.url;
+        const thumbnailUrl = videoInfo.thumbnail;
+        const title = videoInfo.title;
 
-        // إرسال المعلومات الأولية: العنوان، الرابط، والصورة المصغرة
+        // إرسال الصورة المصغرة مع العنوان والرابط
         await conn.sendMessage(m.chat, {
-            image: { url: videoThumbnail },
-            caption: `*العنوان:* ${videoTitle}\n*الرابط:* ${videoUrl}`,
-            contextInfo: {
-                externalAdReply: {
-                    showAdAttribution: true,
-                    title: videoTitle,
-                    sourceUrl: videoUrl,
-                    thumbnailUrl: videoThumbnail,
-                }
-            }
+            image: { url: thumbnailUrl },
+            caption: `*Title:* ${title}\n*Link:* ${videoUrl}`,
         }, { quoted: m });
 
-        // تنزيل الفيديو باستخدام الدالة ytdl
+        // استخراج رابط mp3 باستخدام الدالة ytdl
         const response = await ytdl(videoUrl);
-        const videoDownloadUrl = response.data.mp4;
-        if (!videoDownloadUrl) {
-            throw 'فشل في استرداد رابط الفيديو!';
+        const mp3Url = response.data.mp3;
+        if (!mp3Url) {
+            throw 'Failed to retrieve the mp3 link!';
         }
 
-        // إرسال الفيديو بصيغة mp4
+        // إرسال المقطع الصوتي على شكل رسالة صوتية (PTT)
         await conn.sendMessage(m.chat, {
-            video: { url: videoDownloadUrl },
-            mimetype: "video/mp4",
-            fileName: "video.mp4",
-            caption: `*العنوان:* ${videoTitle}`,
+            audio: { url: mp3Url },
+            mimetype: "audio/mpeg",
+            fileName: "audio.mp3",
+            ptt: true,
             contextInfo: {
                 forwardingScore: 100,
                 isForwarded: false,
                 externalAdReply: {
                     showAdAttribution: true,
-                    title: videoTitle,
+                    title: title,
                     sourceUrl: videoUrl,
-                    thumbnailUrl: videoThumbnail,
+                    thumbnailUrl: thumbnailUrl,
                 }
             }
         }, { quoted: m });
 
     } catch (e) {
-        conn.reply(m.chat, `*خطأ:* ${e.message}`, m);
+        conn.reply(m.chat, `*Error:* ${e.message}`, m);
     }
 };
 
 handler.command = ['play'];
-handler.help = ['play'];
+handler.helprompt = ['play'];
 handler.tags = ['downloader'];
 handler.exp = 0;
 handler.limit = false;
@@ -68,6 +60,7 @@ handler.premium = false;
 
 export default handler;
 
+// دالة لجلب رابط mp3 باستخدام API خارجي
 async function ytdl(url) {
     const response = await fetch('https://shinoa.us.kg/api/download/ytdl', {
         method: 'POST',
@@ -80,7 +73,7 @@ async function ytdl(url) {
     });
 
     if (!response.ok) {
-        throw new Error(`فشل في تحميل الفيديو: HTTP status ${response.status}`);
+        throw new Error(`Failed to fetch audio: HTTP status ${response.status}`);
     }
 
     const data = await response.json();
