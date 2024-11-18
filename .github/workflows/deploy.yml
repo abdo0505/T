@@ -38,7 +38,7 @@ jobs:
         uses: denoland/deployctl@v1
         with:
           project: "mohakobi79-themystic-b-68"
-          entrypoint: "main.js"
+          entrypoint: "main.ts"
           root: "."
           
           
