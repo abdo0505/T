@@ -29,16 +29,13 @@ jobs:
           node-version: lts/*
 
       - name: Install step
-        run: "npm i & npm start"
-
-      - name: Build step
-        run: "npm start"
+        run: "npm i && npm start "
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "mohakobi79-themystic-b-68"
-          entrypoint: "main.ts"
+          project: "mohakobi79-themystic-b-206"
+          entrypoint: "main.js"
           root: "./"
           
           
