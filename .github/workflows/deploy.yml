@@ -39,6 +39,6 @@ jobs:
         with:
           project: "mohakobi79-themystic-b-68"
           entrypoint: "main.ts"
-          root: "."
+          root: "./"
           
           
