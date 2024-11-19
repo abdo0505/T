@@ -37,7 +37,7 @@ jobs:
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "mohakobi79-themystic-b-7"
+          project: "mohakobi79-themystic-b-56"
           entrypoint: "main.js"
           root: "./"
           
