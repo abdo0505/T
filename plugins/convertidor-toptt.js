@@ -1,25 +1,58 @@
-import {toPTT} from '../src/libraries/converter.js';
+import fs from 'fs';
+import ffmpeg from 'fluent-ffmpeg';
 
+const handler = async (m, { conn }) => {
+  const q = m.quoted || m;
+  const mime = (q.msg || q).mimetype || '';
+  if (/audio|video/.test(mime)) {
+    const media = await q.download();
+    const ext = mime.split('/')[1];
+    const baseFilePath = `./src/tmp/${m.sender}`;
+    const inputPath = await getUniqueFileName(baseFilePath, ext);
+    const outputPath = inputPath.replace(/\.[^.]+$/, '.mp3'); // Replace extension with .mp3
 
-const handler = async (m, {conn, usedPrefix, command}) => {
-  const datas = global
-  const idioma = datas.db.data.users[m.sender].language || global.defaultLenguaje
-  const _translate = JSON.parse(fs.readFileSync(`./src/languages/${idioma}.json`))
-  const tradutor = _translate.plugins.convertidor_toptt
+    fs.writeFileSync(inputPath, media);
 
-  const q = m.quoted ? m.quoted : m;
-  const mime = (m.quoted ? m.quoted : m.msg).mimetype || '';
-  if (!/video|audio/.test(mime)) throw `*${tradutor.texto1}*`;
-  const media = await q.download?.();
-  if (!media && !/video/.test(mime)) throw `*${tradutor.texto2}*`;
-  if (!media && !/audio/.test(mime)) throw `*${tradutor.texto3}*`;
-  const audio = await toPTT(media, 'mp4');
-  if (!audio.data && !/audio/.test(mime)) throw `*${tradutor.texto4}*`;
-  if (!audio.data && !/video/.test(mime)) throw `*${tradutor.texto5}*`;
-  const aa = conn.sendFile(m.chat, audio.data, 'error.mp3', '', m, true, {mimetype: 'audio/mpeg'});
-  if (!aa) return conn.sendMessage(m.chat, {audio: {url: media}, fileName: 'error.mp3', mimetype: 'audio/mpeg', ptt: true}, {quoted: m});
+    // Convert video/audio to MP3
+    await convertToMp3(inputPath, outputPath);
+
+    // Read the MP3 file
+    const mp3Buffer = fs.readFileSync(outputPath);
+
+    // Send the MP3 file as a PTT (Voice Note)
+    await conn.sendMessage(
+      m.chat,
+      { audio: mp3Buffer, fileName: `output.mp3`, mimetype: 'audio/mpeg', ptt: true },
+      { quoted: m }
+    );
+
+    // Cleanup temporary files
+    fs.unlinkSync(inputPath);
+    fs.unlinkSync(outputPath);
+  } else {
+    throw '> *♻️] Error: Please send an audio or video file.*';
+  }
 };
-handler.help = ['tovn (reply)'];
-handler.tags = ['audio'];
-handler.command = /^to(vn|(ptt)?)$/i;
+
+handler.command = /^to$/i;
 export default handler;
+
+async function getUniqueFileName(basePath, extension) {
+  let fileName = `${basePath}.${extension}`;
+  let counter = 1;
+  while (fs.existsSync(fileName)) {
+    fileName = `${basePath}_${counter}.${extension}`;
+    counter++;
+  }
+  return fileName;
+}
+
+function convertToMp3(inputPath, outputPath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .toFormat('mp3')
+      .on('end', resolve)
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
