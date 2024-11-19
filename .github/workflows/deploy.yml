@@ -21,7 +21,7 @@ jobs:
       - name: Install Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -37,7 +37,7 @@ jobs:
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "mohakobi79-themystic-b-56"
+          project: "mohakobi79-themystic-b-7"
           entrypoint: "main.js"
           root: "./"
           
