@@ -1,59 +1,33 @@
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 export async function before(m) {
-    if (!m.text || !m.text.match(/facebook\.com|fb\.watch/i)) return false;
+    // التحقق مما إذا كانت الرسالة تحتوي على رابط فيسبوك
+    if (!m.text || !m.text.includes('facebook.com')) return false;
 
     const url = m.text.match(/(https?:\/\/[^\s]+)/)?.[0];
     if (!url) return;
 
-    const sender = m.sender.split(`@`)[0];
-    await m.reply(wait);
+    await m.reply('wait');
 
     try {
-        const apiUrl = `https://widipe.com/download/fbdl?url=${encodeURIComponent(url)}`;
-        let response = await fetch(apiUrl);
-        let result = await response.json();
+        // استدعاء API لتنزيل الفيديو
+        let response = await axios.get(`https://vkrdownloader.vercel.app/server?vkr=${url}`);
+        let data = response.data.data;
 
-        if (!result || !result.status || !result.result || (!result.result.HD && !result.result.Normal_video)) {
-            // Try the second API if the first one fails
-            const backupApiUrl = `https://widipe.com/download/fbdown?url=${encodeURIComponent(url)}`;
-            response = await fetch(backupApiUrl);
-            result = await response.json();
+        // الحصول على عنوان الفيديو
+        const title = data.title || "Video"; // تأكد من أن لديك عنوانًا افتراضيًا في حال عدم وجود عنوان
 
-            if (!result || !result.status || !result.result || !result.result.url) {
-                throw 'Failed to fetch video details from both APIs';
-            }
-
-            const videoLink = result.result.url.isHdAvailable ? result.result.url.urls[0].hd : result.result.url.urls[1].sd;
-            const videoBuffer = await fetch(videoLink).then(res => res.buffer());
-
-            await conn.sendMessage(
-                m.chat, {
-                video: videoBuffer,
-                mimetype: "video/mp4",
-                fileName: `video.mp4`,
-                mentions: [m.sender],
-            }, {
-                quoted: m
-            });
-        } else {
-            // Handle the first API response
-            const videoLink = result.result.HD || result.result.Normal_video;
-            const videoBuffer = await fetch(videoLink).then(res => res.buffer());
-
-            await conn.sendMessage(
-                m.chat, {
-                video: videoBuffer,
-                mimetype: "video/mp4",
-                fileName: `video.mp4`,
-                mentions: [m.sender],
-            }, {
-                quoted: m
-            });
+        // إرسال الفيديو مع العنوان
+        let downloads = data.downloads.map(d => d.url);
+        for (let downloadUrl of downloads) {
+            await conn.sendMessage(m.chat, { 
+                video: { url: downloadUrl }, 
+                caption: title // إضافة العنوان كتعليق
+            }, { quoted: m });
         }
-    } catch (error) {
-        console.error('Handler Error:', error);
-        conn.reply(m.chat, `An error occurred: ${error}`, m);
+    } catch (e) {
+        console.error(e);
+        await conn.sendMessage(m.chat, { text: `An error occurred while downloading the video.` }, { quoted: m });
     }
 }
 
