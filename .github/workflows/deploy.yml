@@ -1,7 +1,5 @@
 name: Deploy
 on:
-  schedule:
-    - cron: "*/10 * * * *" # إعادة التشغيل كل 10 دقائق
   push:
     branches: master
   pull_request:
@@ -42,3 +40,5 @@ jobs:
           project: "mohakobi79-themystic-b-56"
           entrypoint: "main.js"
           root: "./"
+          
+          
