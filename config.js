@@ -15,7 +15,8 @@ global.isBaileysFail = false
 
 global.defaultLenguaje = 'ar';
 
-global.owner = ['212697516526', '💫 Mystic - kobi 💫', true] ;
+global.owner = [
+ ['212697516526', '💫 Mystic - kobi 💫', true] ];
 
 global.suittag = ['5219993404349'];
 global.prems = ['51995386439'];
