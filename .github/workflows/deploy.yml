@@ -5,7 +5,7 @@ on:
   pull_request:
     branches: master
   schedule:
-    - cron: "*/10 * * * *" # تشغيل كل 10 دقائق
+    - cron: "0 */4 * * *" # تشغيل كل 4 ساعات
 
 jobs:
   deploy:
