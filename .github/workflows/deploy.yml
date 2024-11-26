@@ -1,0 +1,72 @@
+name: Deploy
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+  schedule:
+    - cron: "*/10 * * * *" # تشغيل كل 10 دقائق
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. حذف جميع عمليات النشر باستثناء الأحدث
+      - name: Cancel all previous deployments
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const runs = await github.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: context.workflow,
+              status: 'in_progress',
+            });
+
+            // ترتيب العمليات حسب الأحدث
+            const sortedRuns = runs.data.workflow_runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            // الاحتفاظ بأحدث عملية فقط
+            for (const [index, run] of sortedRuns.entries()) {
+              if (index > 0) { // إلغاء جميع العمليات باستثناء الأحدث
+                await github.actions.cancelWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: run.id,
+                });
+              }
+            }
+
+      # 2. Clone the repository
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      # 3. Install Deno
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v1.x
+
+      # 4. Install Node.js
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      # 5. تثبيت الحزم المطلوبة
+      - name: Install dependencies
+        run: npm i
+
+      # 6. تشغيل البوت
+      - name: Start bot
+        run: npm run start
+
+      # 7. رفع على Deno Deploy
+      - name: Upload to Deno Deploy
+        uses: denoland/deployctl@v1
+        with:
+          project: "mohakobi79-themystic-b-54"
+          entrypoint: "Dockerfile"
+          root: "./"
