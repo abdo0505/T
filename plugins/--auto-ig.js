@@ -4,13 +4,13 @@ const handler = async (m, { conn }) => {
     // تعريف تعبير منتظم للتحقق من روابط إنستغرام
     const urlRegex = /https?:\/\/(www\.)?instagram\.com\/(reel|reels|p|stories|tv|s)\/[a-zA-Z0-9_-]+/i;
     const match = m.text.match(urlRegex);
-
+await m.reply(wait);
     if (!match) {
         return; // لا يوجد رابط إنستغرام في الرسالة
     }
 
     const instagramUrl = match[0];
-    await m.reply(wait;
+    
 
     try {
         const result = await instagram(instagramUrl);
@@ -26,7 +26,7 @@ const handler = async (m, { conn }) => {
         } else {
             const media = result.data[0];
             const fileName = media.type === "video" ? "instagram.mp4" : "instagram.jpg";
-            await conn.sendFile(m.chat, media.url, fileName, "*Instagram 🩵 Downloader*", m);
+            await conn.sendFile(m.chat, media.url, fileName, "*Instagram Downloader*", m);
         }
 
     } catch (error) {
