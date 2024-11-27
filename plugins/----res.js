@@ -22,6 +22,6 @@ const handler = async (m, { text, usedPrefix, command, conn }) => {
     await conn.sendMessage(m.chat, { text: message }, { quoted: m });
 };
 
-handler.command = /^.$/i;
+handler.command = /^()$/i;
 
 export default handler;
