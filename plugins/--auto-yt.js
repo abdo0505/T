@@ -1,70 +1,58 @@
 import axios from "axios";
-import yts from "yt-search";
 
-const handler = async (m, { conn, usedPrefix, command, text }) => {
-    // التحقق من وجود نص في الإدخال
-    if (!text) {
-        throw `*• Contoh :* ${usedPrefix + command} *<query>*`;
+const handler = async (m, { conn }) => {
+    // تعريف تعبير منتظم للتحقق من روابط يوتيوب
+    const urlRegex = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s]+$/i;
+    const match = m.text.match(urlRegex);
+
+    if (!match) {
+        return; // لا يوجد رابط يوتيوب في الرسالة
     }
 
-    m.reply("يرجى الانتظار قليلاً...");
-
-    let videoUrl;
-
-    // البحث عن الفيديو باستخدام النص المدخل
-    let result = await yts(text);
-    videoUrl = result.videos[0]?.url; // الحصول على رابط أول فيديو
-    if (!videoUrl) {
-        return m.reply("لم يتم العثور على فيديو يطابق البحث.");
-    }
-
-    // ترميز الرابط لاستخدامه في طلب API
-    const encodedUrl = encodeURIComponent(videoUrl);
-    const apiUrl = `https://Ikygantengbangetanjay-api.hf.space/yt?query=${encodedUrl}`;
+    const videoUrl = match[0];
+    await m.reply(wait;
 
     try {
-        console.log(`إرسال طلب إلى API: ${apiUrl}`); // طباعة رابط API
-        let response = await axios.get(apiUrl);
-        console.log(`استجابة API:`, response.data); // طباعة استجابة API
+        // استدعاء API للحصول على بيانات الفيديو
+        const apiUrl = `https://Ikygantengbangetanjay-api.hf.space/yt?query=${encodeURIComponent(videoUrl)}`;
+        console.log(`إرسال طلب إلى API: ${apiUrl}`);
+        const { data } = await axios.get(apiUrl);
+        console.log(`استجابة API:`, data);
 
-        let data = response.data;
-
-        // التحقق من النتائج
+        // التحقق من استجابة API
         if (!data.success || !data.result) {
-            return m.reply("لم يتم العثور على نتائج.");
+            return m.reply("حدث خطأ أثناء جلب معلومات الفيديو. حاول لاحقًا.");
         }
 
-        let videoData = data.result;
-        let cap = `*乂 Y T M P 4 - D O W N L O A D*\n\n` +
-                  `◦ العنوان : ${videoData.title}\n` +
-                  `◦ رابط الفيديو : ${videoData.url}\n` +
-                  `◦ المدة : ${videoData.timestamp}\n` +
-                  `◦ الكاتب : ${videoData.author.name}\n` +
-                  `◦ المشاهدات : ${videoData.views}\n` +
-                  `◦ منذ : ${videoData.ago}`;
-
-        await conn.sendMessage(m.chat, { text: cap }, { quoted: m });
+        const videoData = data.result;
+        const caption = `*乂 Y T M P 4  🩵 D O W N L O A D*\n\n` +
+                        `◦ العنوان : ${videoData.title}\n` +
+                        `◦ المدة : ${videoData.timestamp}\n` +
+                        `◦ الكاتب : ${videoData.author.name}\n` +
+                        `◦ المشاهدات : ${videoData.views}\n` +
+                        `◦ منذ : ${videoData.ago}`;
 
         // تنزيل الفيديو
         const videoResponse = await axios.get(videoData.download.video, { responseType: 'arraybuffer' });
         const videoBuffer = Buffer.from(videoResponse.data, 'binary');
 
-        // إرسال الفيديو كرسالة وسائط
+        // إرسال الفيديو للمستخدم
         await conn.sendMessage(m.chat, {
             video: videoBuffer,
             mimetype: 'video/mp4',
             fileName: `${videoData.title}.mp4`,
-            caption: cap
+            caption: caption
         }, { quoted: m });
 
     } catch (error) {
-        console.error("حدث خطأ:", error); // طباعة الخطأ
-        m.reply("حدث خطأ أثناء تنزيل الفيديو. يرجى التحقق من السجل لمزيد من التفاصيل.");
+        console.error("حدث خطأ أثناء تنزيل الفيديو:", error);
+        m.reply("حدث خطأ أثناء تنزيل الفيديو. حاول لاحقًا.");
     }
-}
+};
 
-handler.help = ["ytmp4", "playmp4"].map(a => a + " *[query]*");
+// تعريف الأوامر والعلامات
 handler.tags = ["downloader"];
-handler.command = ["playmp4", "y4"];
+handler.customPrefix = /https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i;
+handler.command = new RegExp;
 
 export default handler;
