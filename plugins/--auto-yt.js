@@ -1,23 +1,21 @@
 import axios from "axios";
 import yts from "yt-search";
 
-const handler = async (m, { conn, text }) => {
-    if (!text) return; // إذا كانت الرسالة فارغة، تجاهلها
+const handler = async (m, { conn, usedPrefix, command, text }) => {
+    // التحقق من وجود نص في الإدخال
+    if (!text) {
+        throw `*• Contoh :* ${usedPrefix + command} *<query>*`;
+    }
 
     m.reply("يرجى الانتظار قليلاً...");
 
     let videoUrl;
 
-    // إذا كان النص رابط يوتيوب
-    if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text)) {
-        videoUrl = text.trim();
-    } else {
-        // إذا كان النص عبارة عن كلمات بحث
-        let result = await yts(text);
-        videoUrl = result.videos[0]?.url; // اختيار أول فيديو
-        if (!videoUrl) {
-            return m.reply("لم يتم العثور على فيديو يطابق البحث.");
-        }
+    // البحث عن الفيديو باستخدام النص المدخل
+    let result = await yts(text);
+    videoUrl = result.videos[0]?.url; // الحصول على رابط أول فيديو
+    if (!videoUrl) {
+        return m.reply("لم يتم العثور على فيديو يطابق البحث.");
     }
 
     // ترميز الرابط لاستخدامه في طلب API
@@ -63,6 +61,10 @@ const handler = async (m, { conn, text }) => {
         console.error("حدث خطأ:", error); // طباعة الخطأ
         m.reply("حدث خطأ أثناء تنزيل الفيديو. يرجى التحقق من السجل لمزيد من التفاصيل.");
     }
-};
+}
+
+handler.help = ["ytmp4", "playmp4"].map(a => a + " *[query]*");
+handler.tags = ["downloader"];
+handler.command = ["playmp4", "y4"];
 
 export default handler;
