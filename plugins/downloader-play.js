@@ -1,81 +1,70 @@
+import axios from "axios";
 import yts from "yt-search";
-import fetch from 'node-fetch';
 
-const handler = async (m, { conn, text }) => {
-    if (!text) throw 'Please enter a YouTube title or link!';
+const handler = async (m, { conn, usedPrefix, command, text }) => {
+    // Memastikan ada input teks
+    if (!text) {
+        throw `*• Contoh :* ${usedPrefix + command} *<query>*`;
+    }
+
+    m.reply(wait);
+
+    let videoUrl;
+
+    // Mencari video berdasarkan teks
+    let result = await yts(text);
+    videoUrl = result.videos[0]?.url; // Ambil URL video pertama
+    if (!videoUrl) {
+        return m.reply("Tidak ada video ditemukan dengan pencarian tersebut.");
+    }
+
+    // Encode URL untuk digunakan dalam permintaan API
+    const encodedUrl = encodeURIComponent(videoUrl);
+    const apiUrl = `https://Ikygantengbangetanjay-api.hf.space/yt?query=${encodedUrl}`;
 
     try {
-        const search = await yts(text);
-        if (!search || !search.all || search.all.length === 0) {
-            throw 'No results found for your query!';
+        console.log(`Mengirim permintaan ke API: ${apiUrl}`); // Log URL API
+        let response = await axios.get(apiUrl);
+        console.log(`Respons dari API:`, response.data); // Log respons dari API
+
+        let data = response.data;
+
+        // Memeriksa apakah hasil valid
+        if (!data.success || !data.result) {
+            return m.reply("Tidak ada hasil ditemukan.");
         }
 
-        const videoInfo = search.all[0];
-        const videoUrl = videoInfo.url;
-        const thumbnailUrl = videoInfo.thumbnail;
-        const title = videoInfo.title;
+        let videoData = data.result;
+        let cap = `*乂 Y T M P 3 ♻️- P L A Y*\n\n` +
+                  `◦ Judul : ${videoData.title}\n` +
+                  `◦ Link Video : ${videoData.url}\n` +
+                  `◦ Durasi : ${videoData.timestamp}\n` +
+                  `◦ Penulis : ${videoData.author.name}\n` +
+                  `◦ Views : ${videoData.views}\n` +
+                  `◦ Diunggah : ${videoData.ago}`;
 
-        // إرسال الصورة المصغرة مع العنوان والرابط
+        await conn.sendMessage(m.chat, { text: cap }, { quoted: m });
+
+        // Mengunduh audio
+        const audioResponse = await axios.get(videoData.download.audio, { responseType: 'arraybuffer' });
+        const audioBuffer = Buffer.from(audioResponse.data, 'binary');
+
+        // Kirim audio sebagai pesan media
         await conn.sendMessage(m.chat, {
-            image: { url: thumbnailUrl },
-            caption: `*Title:* ${title}\n*Link:* ${videoUrl}`,
+            audio: audioBuffer,
+            mimetype: 'audio/mpeg',
+            fileName: `${videoData.title}.mp3`,
+            caption: cap
         }, { quoted: m });
 
-        // استخراج رابط mp3 باستخدام الدالة ytdl
-        const response = await ytdl(videoUrl);
-        const mp3Url = response.data.mp3;
-        if (!mp3Url) {
-            throw 'Failed to retrieve the mp3 link!';
-        }
-
-        // إرسال المقطع الصوتي على شكل رسالة صوتية (PTT)
-        await conn.sendMessage(m.chat, {
-            audio: { url: mp3Url },
-            mimetype: "audio/mpeg",
-            fileName: "audio.mp3",
-            ptt: true,
-            contextInfo: {
-                forwardingScore: 100,
-                isForwarded: false,
-                externalAdReply: {
-                    showAdAttribution: true,
-                    title: title,
-                    sourceUrl: videoUrl,
-                    thumbnailUrl: thumbnailUrl,
-                }
-            }
-        }, { quoted: m });
-
-    } catch (e) {
-        conn.reply(m.chat, `*Error:* ${e.message}`, m);
+    } catch (error) {
+        console.error("Terjadi kesalahan:", error); // Log kesalahan
+        m.reply("Terjadi kesalahan saat mengunduh audio. Silakan periksa log untuk detail.");
     }
-};
+}
 
-handler.command = ['play'];
-handler.helprompt = ['play'];
-handler.tags = ['downloader'];
-handler.exp = 0;
-handler.limit = false;
-handler.premium = false;
+handler.help = ["ytmp3", "yta", "play"].map(a => a + " *[query]*");
+handler.tags = ["downloader"];
+handler.command = ["play"];
 
 export default handler;
-
-// دالة لجلب رابط mp3 باستخدام API خارجي
-async function ytdl(url) {
-    const response = await fetch('https://shinoa.us.kg/api/download/ytdl', {
-        method: 'POST',
-        headers: {
-            'accept': '*/*',
-            'api_key': 'free',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ text: url })
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch audio: HTTP status ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-}
