@@ -10,7 +10,7 @@ const handler = async (m, { conn }) => {
     }
 
     const videoUrl = match[0];
-    await m.reply(wait;
+    await m.reply(wait);
 
     try {
         // استدعاء API للحصول على بيانات الفيديو
@@ -25,7 +25,7 @@ const handler = async (m, { conn }) => {
         }
 
         const videoData = data.result;
-        const caption = `*乂 Y T M P 4  🩵 D O W N L O A D*\n\n` +
+        const caption = `*乂 Y T M P 4 🩵 D O W N L O A D*\n\n` +
                         `◦ العنوان : ${videoData.title}\n` +
                         `◦ المدة : ${videoData.timestamp}\n` +
                         `◦ الكاتب : ${videoData.author.name}\n` +
