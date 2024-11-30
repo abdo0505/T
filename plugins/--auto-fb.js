@@ -1,34 +1,59 @@
-import axios from 'axios';
+import fetch from 'node-fetch';
 
-export async function before(m) {
-    // التحقق مما إذا كانت الرسالة تحتوي على رابط فيسبوك
-    if (!m.text || !m.text.includes('facebook.com')) return false;
+let handler = async (m, { conn }) => {
+    // التعبير المنتظم لاكتشاف روابط فيسبوك
+    const urlRegex = /https?:\/\/(?:www\.)?facebook\.com\/[^\s]+/i;
+    const match = m.text.match(urlRegex);
 
-    const url = m.text.match(/(https?:\/\/[^\s]+)/)?.[0];
-    if (!url) return;
+    if (!match) {
+        return; // لا يوجد رابط فيديو من فيسبوك في الرسالة
+    }
 
-    await m.reply('wait');
+    const videoUrl = match[0]; // استخراج رابط الفيديو
+    await m.reply(wait);
 
     try {
-        // استدعاء API لتنزيل الفيديو
-        let response = await axios.get(`https://vkrdownloader.vercel.app/server?vkr=${url}`);
-        let data = response.data.data;
+        // استدعاء دالة التنزيل
+        const { success, title, links } = await fb(videoUrl);
 
-        // الحصول على عنوان الفيديو
-        const title = data.title || "Video"; // تأكد من أن لديك عنوانًا افتراضيًا في حال عدم وجود عنوان
-
-        // إرسال الفيديو مع العنوان
-        let downloads = data.downloads.map(d => d.url);
-        for (let downloadUrl of downloads) {
-            await conn.sendMessage(m.chat, { 
-                video: { url: downloadUrl }, 
-                caption: title // إضافة العنوان كتعليق
-            }, { quoted: m });
+        if (!success) {
+            throw 'حدث خطأ أثناء محاولة التنزيل. يرجى المحاولة لاحقًا.';
         }
+
+        // إرسال الفيديو بجودة عالية
+        await conn.sendFile(m.chat, links['Download High Quality'], '', `*${title || 'بدون عنوان'}*`, m);
     } catch (e) {
-        console.error(e);
-        await conn.sendMessage(m.chat, { text: `An error occurred while downloading the video.` }, { quoted: m });
+        throw e;
+    }
+};
+
+handler.tags = ['downloader'];
+handler.customPrefix = /https?:\/\/(?:www\.)?facebook\.com\//i;
+handler.command = new RegExp;
+
+export default handler;
+
+// دالة التنزيل من فيسبوك
+async function fb(vid_url) {
+    try {
+        const data = {
+            url: vid_url,
+        };
+        const searchParams = new URLSearchParams();
+        searchParams.append('url', data.url);
+        const response = await fetch('https://facebook-video-downloader.fly.dev/app/main.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: searchParams.toString(),
+        });
+        const responseData = await response.json();
+        return responseData;
+    } catch (e) {
+        return {
+            success: false,
+            error: e.message,
+        };
     }
 }
-
-export const disabled = false;
