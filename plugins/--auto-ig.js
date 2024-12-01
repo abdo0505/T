@@ -1,34 +1,42 @@
-import axios from 'axios';
+import fetch from 'node-fetch';
 
-export async function before(m) {
-    // التحقق مما إذا كانت الرسالة تحتوي على رابط إنستغرام
-    if (!m.text || !m.text.match(/instagram\.com|instagr\.am/i)) return false;
+let handler = async (m, { conn }) => {
+    // التعبير المنتظم لاكتشاف روابط إنستغرام
+    const urlRegex = /https?:\/\/(?:www\.)?instagram\.com\/[^\s]+/i;
+    const match = m.text.match(urlRegex);
 
-    const url = m.text.match(/(https?:\/\/[^\s]+)/)?.[0];
-    if (!url) return;
+    if (!match) {
+        return; // لا يوجد رابط فيديو من إنستغرام في الرسالة
+    }
 
-    await m.reply(wait);
+    const videoUrl = match[0]; // استخراج رابط الفيديو
+    await m.reply("جاري تنزيل الفيديو، يرجى الانتظار...");
 
     try {
-        // استدعاء API لتنزيل الفيديو
-        let response = await axios.get(`https://vkrdownloader.vercel.app/server?vkr=${url}`);
-        let data = response.data.data;
+        // استدعاء واجهة برمجة التطبيقات لتنزيل الفيديو
+        let api = await fetch(`https://deliriussapi-oficial.vercel.app/download/instagram?url=${videoUrl}`);
+        let json = await api.json();
+        let { data } = json;
+        let JT = data;
 
-        // الحصول على عنوان الفيديو
-        const title = data.title || "Video"; // تأكد من أن لديك عنوانًا افتراضيًا في حال عدم وجود عنوان
-
-        // إرسال الفيديو مع العنوان
-        let downloads = data.downloads.map(d => d.url);
-        for (let downloadUrl of downloads) {
-            await conn.sendMessage(m.chat, { 
-                video: { url: downloadUrl }, 
-                caption: title // إضافة العنوان كتعليق
-            }, { quoted: m });
+        // إرسال الوسائط (صور/فيديوهات)
+        for (let i = 0; i < JT.length; i++) {
+            let HFC = JT[i];
+            if (HFC.type === "image") {
+                await conn.sendMessage(m.chat, { image: { url: HFC.url } }, { quoted: m });
+            } else if (HFC.type === "video") {
+                await conn.sendMessage(m.chat, { video: { url: HFC.url } }, { quoted: m });
+            }
         }
-    } catch (e) {
-        console.error(e);
-        await conn.sendMessage(m.chat, { text: `An error occurred while downloading the video.` }, { quoted: m });
+    } catch (error) {
+        console.error(error);
+        await m.reply("حدث خطأ أثناء محاولة تنزيل الفيديو.");
     }
-}
+};
 
-export const disabled = false;
+// إعدادات المعالج
+handler.tags = ['downloader'];
+handler.customPrefix = /https?:\/\/(?:www\.)?instagram\.com\//i;
+handler.command = new RegExp;
+
+export default handler;
