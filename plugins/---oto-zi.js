@@ -9,7 +9,7 @@ const handler = async (m, { text, conn }) => {
 
     // إرسال إشعار بأن البوت يكتب
     let { key } = await conn.sendMessage(m.chat, {
-      text: "...يكتب",
+      text: " ",
     });
 
     // النص المخصص لتحفيز الردود
