@@ -10,7 +10,7 @@ let handler = async (m, { conn }) => {
     }
 
     const videoUrl = match[0]; // استخراج رابط الفيديو
-    await m.reply("جاري تنزيل الفيديو، يرجى الانتظار...");
+    await m.reply(wait);
 
     try {
         // استدعاء واجهة برمجة التطبيقات لتنزيل الفيديو
