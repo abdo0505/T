@@ -74,6 +74,6 @@ const handler = async (m, { conn, usedPrefix, command, text }) => {
 
 handler.help = ["ytmp3", "yta", "play"].map(a => a + " *[query]*");
 handler.tags = ["downloader"];
-handler.command = ["ply"];
+handler.command = ["play"];
 
 export default handler;
