@@ -43,7 +43,16 @@ const handler = async (m, { conn, usedPrefix, command, text }) => {
                   `◦ Views : ${videoData.views}\n` +
                   `◦ Diunggah : ${videoData.ago}`;
 
-        await conn.sendMessage(m.chat, { text: cap }, { quoted: m });
+        // تحميل الصورة من الرابط وتحويلها إلى Buffer
+        const imageUrl = "https://qu.ax/NkKUn.jpg";
+        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+        // إرسال الصورة مع النصوص
+        await conn.sendMessage(m.chat, {
+            image: imageBuffer,
+            caption: cap
+        }, { quoted: m });
 
         // Mengunduh audio
         const audioResponse = await axios.get(videoData.download.audio, { responseType: 'arraybuffer' });
@@ -59,12 +68,12 @@ const handler = async (m, { conn, usedPrefix, command, text }) => {
 
     } catch (error) {
         console.error("Terjadi kesalahan:", error); // Log kesalahan
-        m.reply("Terjadi kesalahan saat mengunduh audio. Silakan periksa log untuk detail.");
+        m.reply("Terjadi kesalahan saat memproses permintaan. Silakan periksa log untuk detail.");
     }
-}
+};
 
 handler.help = ["ytmp3", "yta", "play"].map(a => a + " *[query]*");
 handler.tags = ["downloader"];
-handler.command = ["play"];
+handler.command = ["ply"];
 
 export default handler;
