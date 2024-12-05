@@ -6,7 +6,7 @@ let handler = async (m, { conn }) => {
     const match = m.text.match(urlRegex);
 
     if (!match) {
-        return; // لا يوجد رابط فيديو من تيكتوك في الرسالة
+        return; // لايوجد رابط فيديو من تيكتوك في الرسالة
     }
 
     const videoUrl = match[0];
