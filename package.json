@@ -66,7 +66,7 @@
     "fs": "^0.0.1-security",
     "google-it": "^1.6.3",
     "google-play-scraper": "^10.0.0",
-"media-downloader" : "*" ,
+"youtube-dl-exec": "*",
     "hispamemes": "^1.0.7",
     "human-readable": "^0.2.1",
     "imagemaker.js": "^2.0.4",
