@@ -55,7 +55,7 @@
     "colors": "1.4.0",
 "download.js" :  "*",
 "path": "*",
-
+"ruhend-scraper": "*",
     "d3-node": "^3.0.0",
     "esm": "^3.2.25",
     "express": "^4.17.3",
@@ -103,7 +103,7 @@
     "url-regex-safe": "^3.0.0",
     "yargs": "^17.3.1",
     "yt-search": "^2.10.3",
-    "ytdl-core": "github:khlevon/node-ytdl-core#v4.11.4-patch.2"
+    "ytdl-core": "*"
   },
   "optionalDependencies": {
     "@xct007/frieren-scraper": "github:BrunoSobrino/frieren-scraper",
