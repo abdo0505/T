@@ -5,7 +5,7 @@ let previousMessages = [];
 // المعالج الرئيسي للردود
 const handler = async (m, { text, conn }) => {
   try {
-    if (!text) throw "النص فارغ!";
+    if (!text) throw "النص";
 
     // إرسال إشعار بأن البوت يكتب
     let { key } = await conn.sendMessage(m.chat, {
