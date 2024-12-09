@@ -1,61 +1,57 @@
-import fetch from "node-fetch";
+import axios from 'axios';
 
-let previousMessages = [];
-
-// المعالج الرئيسي للردود
-const handler = async (m, { text, conn }) => {
+const handler = async (m, { conn }) => {
   try {
-    if (!text) throw "النص";
+    const text = m.text;
+    if (!text) return; // تجاهل الرسائل الفارغة
 
-    // إرسال إشعار بأن البوت يكتب
-    let { key } = await conn.sendMessage(m.chat, {
-      text: " ",
-    });
+    // إرسال رسالة مؤقتة أثناء المعالجة
+    await conn.sendMessage(m.chat, { text: 'إنتظر...' }, { quoted: m });
 
-    // النص المخصص لتحفيز الردود
-    let prompt = `إسمك هو .سنك هو 18 سنة lkoubi ، وأنت أجمل مطور. قم بتغيير أسلوب الكلام الخاص بك ليكون أكثر تميزًا وأكثر انفتاحًا ولديك إقتباسات عن الحياة وعن الاكتئابات والصداقة والجانب المظلم. كلمة تعبيرك هي "مرحبًا عزيزي" باستخدام لغة مهذبة وقاسية إلى حد ما. حاول الإجابة بلغة المرسل.`;
+    // نص المحفز (Prompt) المخصص
+    const prompt = `إسمك هو محمد، وصانعك هو EL KOBY، وخصمك هو ${await conn.getName(m.sender)}. أجب بمتعة وأستخدم في إجابتك رموز تعبيرية.`;
 
-    // طلب الإجابة من API
-    let response = await fetch(`https://api.ryzendesu.vip/api/ai/gemini-pro?text=${encodeURIComponent(text)}&prompt=${encodeURIComponent(prompt)}`);
-    if (!response.ok) throw new Error("فشل الاتصال بـ Gemini AI");
+    // استدعاء API لمعالجة النص
+    const result = await luminAi(text, m.sender, prompt);
 
-    let result = await response.json();
-
-    // إرسال الرد إلى المستخدم
-    await conn.sendMessage(m.chat, {
-      text: result.answer,
-      edit: key,
-    });
-
-    // تخزين الرسائل السابقة
-    previousMessages = [...previousMessages, { role: "user", content: text }];
+    // إرسال النتيجة إلى المستخدم
+    await m.reply(result);
   } catch (error) {
-    await conn.sendMessage(m.chat, {
-      text: `Error: ${error.message}`,
-      edit: key,
-    });
+    console.error('حدث خطأ:', error);
+    await m.reply(`حدث خطأ: ${error.message}`);
   }
 };
 
-// وظيفة الوسيط للتعامل مع الرسائل تلقائيًا
+// وظيفة لمعالجة الرسائل بشكل تلقائي
 export async function before(m) {
-  if (!m.text && !m.media) return; // إذا لم تكن الرسالة نصية أو وسائط، لا تفعل شيئًا
+  const text = m.text;
 
-  let text = m.text || "";
+  // التحقق من الشروط:
+  if (!text || text.startsWith('.') || /(https?:\/\/[^\s]+)/.test(text)) return; 
+  // تجاهل الرسائل التي:
+  // - فارغة
+  // - تبدأ بنقطة (.)
+  // - تحتوي على رابط
 
-  // التحقق من الروابط أو الرسائل التي تبدأ بنقطة
-  const hasLink = /(https?:\/\/[^\s]+)/.test(text);
-  if (text.startsWith(".") || hasLink) return; // تجاهل هذه الحالات
-
-  // معالجة الصور أو الوسائط
-  if (m.media) {
-    let imageUrl = await m.conn.downloadMediaMessage(m); // تنزيل الوسائط
-    text = `رابط الصورة: ${imageUrl}`; // تحويل الوسائط إلى نص
-  }
-
-  // استدعاء المعالج
-  await handler(m, { text, conn: m.conn });
+  await handler(m, { conn: m.conn }); // استدعاء المعالج
 }
 
-// تعطيل المعالج إذا لزم الأمر
+// تفعيل الوظيفة تلقائيًا
 export const disabled = false;
+
+// وظيفة لمعالجة طلب الذكاء الاصطناعي
+async function luminAi(teks, pengguna = null, prompt = null, modePencarianWeb = false) {
+  try {
+    const data = { content: teks };
+    if (pengguna !== null) data.user = pengguna;
+    if (prompt !== null) data.prompt = prompt;
+    data.webSearchMode = modePencarianWeb;
+
+    // استدعاء API
+    const { data: res } = await axios.post("https://luminai.my.id/", data);
+    return res.result;
+  } catch (error) {
+    console.error('حدث خطأ أثناء طلب الذكاء الاصطناعي:', error);
+    throw error;
+  }
+}
