@@ -1,11 +1,7 @@
 name: Deploy
 on:
-  push:
-    branches: master
-  pull_request:
-    branches: master
   schedule:
-    - cron: "0 */6 * * *" # تشغيل كل 4 ساعات
+    - cron: "0 */6 * * *" # تشغيل كل 6 ساعات
 
 jobs:
   deploy:
@@ -13,16 +9,28 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write # Needed for auth with Deno Deploy
-      contents: read # Needed to clone the repository
-      actions: write # Needed to cancel other workflows
+      actions: write # ضروري لإلغاء الـ workflows
+      contents: read # مطلوب لاستنساخ المستودع
 
     steps:
-      # Step to cancel previous workflows
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          access_token: ${{ secrets.GITHUB_TOKEN }}
+      # Step to fetch running workflows and cancel duplicates
+      - name: Cancel Duplicate Workflows
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # جلب جميع الـ workflows النشطة
+          runs=$(gh run list --workflow Deploy --status in_progress --json databaseId --jq '.[].databaseId')
+
+          # الاحتفاظ فقط بآخر تشغيل
+          last_run=$(echo "$runs" | tail -n 1)
+
+          # إلغاء جميع التشغيلات الأخرى
+          for run_id in $runs; do
+            if [ "$run_id" != "$last_run" ]; then
+              echo "Cancelling workflow with ID $run_id"
+              gh run cancel $run_id
+            fi
+          done
 
       # Clone the repository
       - name: Clone repository
