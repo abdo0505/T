@@ -1,48 +1,44 @@
-import fetch from 'node-fetch';
 import axios from 'axios';
-import fs from 'fs';
-let enviando = false;
 
-const handler = async (m, {conn, args, command, usedPrefix}) => {
-  const idioma = global.db.data.users[m.sender].language || global.defaultLenguaje;
-  const _translate = JSON.parse(fs.readFileSync(`./src/languages/${idioma}.json`));
-  const tradutor = _translate.plugins.descargas_facebook;
-
+let handler = async (m, { conn, text, args, command, usedPrefix }) => {
   if (!args[0]) {
-    throw `_*${tradutor.texto1[0]}*_\n\n*${tradutor.texto1[1]}*\n\n*${tradutor.texto1[2]}* _${usedPrefix + command} https://fb.watch/fOTpgn6UFQ/_`;
+    return m.reply(`❌ يرجى تقديم رابط Instagram صالح.\n• *الاستخدام:* ${usedPrefix}${command} <الرابط>`);
   }
 
-  if (!enviando) enviando = true;
-  try {
-    
-    const response = await fetch(`${global.MyApiRestBaseUrl}/api/facebook?url=${args[0]}&apikey=${global.MyApiRestApikey}`);
-    const data = await response.json();
+  const url = args[0];
+  if (
+    !(
+      url.includes('instagram.com/p/') ||
+      url.includes('instagram.com/reel/') ||
+      url.includes('instagram.com/tv/')
+    )
+  ) {
+    return m.reply('❌ الرابط غير صالح! فقط منشورات Instagram أو Reels أو TV يمكن معالجتها.');
+  }
 
-    if (data?.status === true) {
-      const videoBuffer = await getBuffer(data.resultado.data);
-      await conn.sendMessage(m.chat, { video: videoBuffer, filename: 'video.mp4', caption: `_*${tradutor.texto4}*_` }, {quoted: m});
-      enviando = false;
+  m.reply('⏳ جاري معالجة الرابط...');
+
+  try {
+    const { data } = await axios.get(`https://weeb-api.vercel.app/insta?url=${url}`);
+    if (data.urls && data.urls.length > 0) {
+      for (const { url: mediaUrl, type } of data.urls) {
+        const mediaType = type === 'image' ? 'image' : 'video';
+        await conn.sendMessage(m.chat, {
+          [mediaType]: { url: mediaUrl },
+          caption: '✔️ تم استخراج الوسائط بنجاح.',
+        }, { quoted: m });
+      }
     } else {
-      console.error('Failed to fetch video data from API:', data);
-      enviando = false;
+      return m.reply('❌ لم يتم العثور على بيانات وسائط للرابط المقدم.');
     }
   } catch (error) {
-    console.error('Error occurred:', error);
-    enviando = false;
-    throw `_*${tradutor.texto5}*`;
+    console.error(error);
+    return m.reply(`❌ حدث خطأ أثناء معالجة الرابط: ${error.message}`);
   }
 };
 
-handler.command = /^(facebook|fb|facebookdl|fbdl|facebook2|fb2|facebookdl2|fbdl2|facebook3|fb3|facebookdl3|fbdl3|facebook4|fb4|facebookdl4|fbdl4|facebook5|fb5|facebookdl5|fbdl5)$/i;
-export default handler;
+handler.help = ['insta <url>'];
+handler.tags = ['downloader'];
+handler.command = /^(ig)$/i;
 
-const getBuffer = async (url, options = {}) => {
-  const res = await axios({
-    method: 'get', 
-    url, 
-    headers: {'DNT': 1, 'Upgrade-Insecure-Request': 1},
-    ...options, 
-    responseType: 'arraybuffer'
-  });
-  return res.data;
-};
+export default handler;
