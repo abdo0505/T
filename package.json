@@ -38,7 +38,7 @@
     "@vitalets/google-translate-api": "^8.0.0",
 "whatsapp-web.js" :"*" ,
 
-    "baileys": "git+https://github.com/Skidy89/baileys.git#master",
+        "baileys": "git+https://lyfe00011-admin@bitbucket.org/lyfe00011/baileys.git",
     "acrcloud": "^1.4.0",
     "aptoide-scraper": "github:DIEGO-OFC/dv-aptoide-scraper",
     "awesome-phonenumber": "^2.68.0",
@@ -49,7 +49,7 @@
     "chats-simsimi": "*",
     "chart.js": "^4.4.2",
     "cheerio": "1.0.0-rc.12",
-    "@whiskeysockets/baileys": "^6.5.0",
+        "@whiskeysockets/baileys": "github:TheGetsuzoZhiro/DevBaileys",
 
 "play-dl" : "*" ,
     "colors": "1.4.0",
