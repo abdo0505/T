@@ -8,7 +8,7 @@ let handler = async (m, { conn }) => {
     const match = m.text.match(urlRegex);
 
     if (!match) {
-        return; // لا يوجد رابط فيديو من فيسبوك في الرسالة
+        return; // لا يوجد رابط فيدو من فيسبوك في الرسالة
     }
 
     const videoUrl = match[0]; // استخراج رابط الفيديو
