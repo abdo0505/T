@@ -1,104 +1,98 @@
-/*
-
-- Agradecimiento a la comunidad de "WSApp • Developers"
- * https://chat.whatsapp.com/FaQunmlp9BmDRk6lEEc9FJ
-- Agradecimiento especial a Carlos (PT) por los codigos de interactiveMessage (botones)
-- Agradecimiento a Darlyn1234 por la estructura de uso en este codigo y quoted
- * https://github.com/darlyn1234
-- Adaptacion de imagen en tipo lista, codigo y funcionamiento por BrunoSobrino
- * https://github.com/BrunoSobrino
-
-*/
-import { prepareWAMessageMedia, generateWAMessageFromContent, getDevice } from "baileys"
 import yts from 'yt-search';
-import fs from 'fs';
+const {
+  generateWAMessageContent,
+  generateWAMessageFromContent,
+  proto
+} = (await import("baileys"))["default"];
 
-const handler = async (m, { conn, text, usedPrefix: prefijo }) => {
-    const datas = global;
-    const idioma = datas.db.data.users[m.sender].language || global.defaultLenguaje;
-    const _translate = JSON.parse(fs.readFileSync(`./src/languages/${idioma}.json`));
-    const traductor = _translate.plugins.buscador_yts;
-    const device = await getDevice(m.key.id);
-    
-  if (!text) throw `⚠️ *${traductor.texto1}*`;
-    
-  if (device !== 'desktop' || device !== 'web') {      
-    
-  const results = await yts(text);
-  if (!results || !results?.videos) return m.reply('> *[❗] Error: Videos not founds.*')    
-  const videos = results.videos.slice(0, 20);
-  const randomIndex = Math.floor(Math.random() * videos.length);
-  const randomVideo = videos[randomIndex];
-      
-  var messa = await prepareWAMessageMedia({ image: {url: randomVideo.thumbnail}}, { upload: conn.waUploadToServer })
-  const interactiveMessage = {
-    body: { text: `*—◉ Resultados obtenidos:* ${results.videos.length}\n*—◉ Video aleatorio:*\n*-› Title:* ${randomVideo.title}\n*-› Author:* ${randomVideo.author.name}\n*-› Views:* ${randomVideo.views}\n*-› ${traductor.texto2[0]}:* ${randomVideo.url}\n*-› Imagen:* ${randomVideo.thumbnail}`.trim() },
-    footer: { text: `${global.wm}`.trim() },  
-      header: {
-          title: `*< YouTube Search />*\n`,
-          hasMediaAttachment: true,
-          imageMessage: messa.imageMessage,
+let handler = async (m, { conn, text, usedPrefix }) => {
+  if (!text) {
+    return conn.reply(
+      m.chat,
+      `🛑 *Escriba el título de algún vídeo de Youtube*\n\nEjemplo: ${usedPrefix}youtube Yotsuba`,
+      m
+    );
+  }
+
+  // البحث عن الفيديوهات باستخدام yt-search
+  let results = await yts(text);
+  let videos = results.videos.slice(0, 5); // الحصول على أول 5 فيديوهات
+
+  let cards = [];
+  for (let video of videos) {
+    let thumbnail = video.thumbnail;
+    let title = video.title;
+    let url = video.url;
+
+    // إنشاء رسالة الصورة
+    let imageMessageContent = await generateWAMessageContent(
+      {
+        image: { url: thumbnail }
       },
-    nativeFlowMessage: {
-      buttons: [
-        {
-          name: 'single_select',
+      { upload: conn.waUploadToServer }
+    );
+
+    // إضافة الفيديو إلى الكروت
+    cards.push({
+      body: proto.Message.InteractiveMessage.Body.fromObject({
+        text: `${title}\n\n🔗 رابط الفيديو: ${url}`
+      }),
+      footer: proto.Message.InteractiveMessage.Footer.fromObject({
+        text: `👁 ${video.views} • ⏰ ${video.timestamp}`
+      }),
+      header: proto.Message.InteractiveMessage.Header.fromObject({
+        title: '',
+        hasMediaAttachment: true,
+        imageMessage: imageMessageContent.imageMessage
+      }),
+      nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({
+        buttons: [{
+          name: "cta_audio",
           buttonParamsJson: JSON.stringify({
-            title: 'OPCIONES DISPONIBLES',
-            sections: videos.map((video) => ({
-              title: video.title,
-              rows: [
-                {
-                  header: video.title,
-                  title: video.author.name,
-                  description: ' MP3',
-                  id: `${prefijo}ytmp3 ${video.url}`
-                },
-                {
-                  header: video.title,
-                  title: video.author.name,
-                  description: ' MP4',
-                  id: `${prefijo}ytmp4 ${video.url}`
-                }
-              ]
-            }))
+            display_text: "تحميل الصوت 🎵",
+            url: `${url}`
+          })
+        }]
+      })
+    });
+  }
+
+  // إنشاء الرسالة النهائية
+  const message = generateWAMessageFromContent(
+    m.chat,
+    {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
+          interactiveMessage: proto.Message.InteractiveMessage.fromObject({
+            body: proto.Message.InteractiveMessage.Body.create({
+              text: `🔍 *Resultados para:* ${text}`
+            }),
+            footer: proto.Message.InteractiveMessage.Footer.create({
+              text: "🔎 `Y O U T U B E - S E A R C H`"
+            }),
+            header: proto.Message.InteractiveMessage.Header.create({
+              hasMediaAttachment: false
+            }),
+            carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.fromObject({
+              cards: [...cards]
+            })
           })
         }
-      ],
-      messageParamsJson: ''
-    }
-  };        
-            
-        let msg = generateWAMessageFromContent(m.chat, {
-            viewOnceMessage: {
-                message: {
-                    interactiveMessage,
-                },
-            },
-        }, { userJid: conn.user.jid, quoted: m })
-      conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id});
+      }
+    },
+    { quoted: m }
+  );
 
-  } else {
-  const datas = global;
-  const idioma = datas.db.data.users[m.sender].language || global.defaultLenguaje;
-  const _translate = JSON.parse(fs.readFileSync(`./src/languages/${idioma}.json`));
-  const traductor = _translate.plugins.buscador_yts;      
-  const results = await yts(text);
-  const tes = results.all;
-  const teks = results.all.map((v) => {
-    switch (v.type) {
-      case 'video': return `
-° *_${v.title}_*
-↳ 🫐 *_${traductor.texto2[0]}_* ${v.url}
-↳ 🕒 *_${traductor.texto2[1]}_* ${v.timestamp}
-↳ 📥 *_${traductor.texto2[2]}_* ${v.ago}
-↳ 👁 *_${traductor.texto2[3]}_* ${v.views}`;
-    }
-  }).filter((v) => v).join('\n\n◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦\n\n');
-  conn.sendFile(m.chat, tes[0].thumbnail, 'error.jpg', teks.trim(), m);      
-  }    
+  // إرسال الرسالة
+  await conn.relayMessage(m.chat, message.message, { messageId: message.key.id });
 };
-handler.help = ['ytsearch <texto>'];
-handler.tags = ['search'];
-handler.command = /^(ytsearch|yts|searchyt|buscaryt|videosearch|audiosearch)$/i;
+
+handler.help = ['youtube'];
+handler.tags = ['downloader'];
+handler.command = /^yon$/i;
+
 export default handler;
