@@ -9,7 +9,7 @@ let handler = async (m, { conn, text, usedPrefix }) => {
   if (!text) {
     return conn.reply(
       m.chat,
-      `🛑 *Escriba el título de algún vídeo de Youtube*\n\nEjemplo: ${usedPrefix}youtube Yotsuba`,
+      `🩵 *Escriba el título de algún vídeo de Youtube*\n\nEjemplo: ${usedPrefix}youtube Yotsuba`,
       m
     );
   }
@@ -93,6 +93,6 @@ let handler = async (m, { conn, text, usedPrefix }) => {
 
 handler.help = ['youtube'];
 handler.tags = ['downloader'];
-handler.command = /^yon$/i;
+handler.command = /^yts$/i;
 
 export default handler;
