@@ -56,7 +56,7 @@ const handler = async (m, {conn, text}) => {
                             fileName: `creds.json`
                         });
 
-                        await NourSock.sendMessage(NourSock.user.id, { text: `🛑هذا السيسيون الخاص بك\n\n© حاول ان لا تشاركه مع اشخاص لا تتق فيهم` }, { quoted: NourRes });
+                        await NourSock.sendMessage(NourSock.user.id, { text: `♻️هذا السيسيون الخاص بك\n\n© حاول ان لا تشاركه🙈 مع اشخاص 🩶لا تتق فيهم` }, { quoted: NourRes });
 
                         await conn.sendMessage(m.chat, { text:`تم تسجيل الدخول بنجاح\n وتم ارسال ملف السيسيون الى رقمك` });
                         await delay(100);
