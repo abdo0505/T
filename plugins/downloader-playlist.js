@@ -1,51 +1,74 @@
 import yts from 'yt-search';
-import fs from 'fs';
+import axios from 'axios';
 
+const handler = async (m, { conn, command, text, usedPrefix }) => {
+    if (!text) throw `Use example: ${usedPrefix}${command} <search term>`;
 
+    // Pencarian video berdasarkan query
+    const search = await yts(text);
+    const vid = search.videos[0];
+    if (!vid) throw 'Video tidak ditemukan, coba judul lain';
 
-const handler = async (m, {conn, text, usedPrefix, command}) => {
-  const datas = global
-  const idioma = datas.db.data.users[m.sender].language || global.defaultLenguaje
-  const _translate = JSON.parse(fs.readFileSync(`./src/languages/${idioma}.json`))
-  const tradutor = _translate.plugins.downloader_playlist
+    const { title, thumbnail, timestamp, views, ago, url, description, author } = vid;
 
+    try {
+        // Mengunduh URL audio dari API ryzendesu
+        const response = await axios.get(`https://api.ryzendesu.vip/api/downloader/ytmp3?url=${encodeURIComponent(url)}`);
+        const downloadUrl = response.data.url;
+        if (!downloadUrl) throw new Error('Audio URL not found');
 
-  if (!text) throw `${tradutor.texto1} \n*${usedPrefix + command} Begin you*`;
-  try {
-    const vids_ = {
-      from: m.sender,
-      urls: [],
-    };
-    if (!global.videoList) {
-      global.videoList = [];
+        // Membuat teks detail untuk pesan
+        const caption = `
+∘ 🎟️ *Title*: ${title}
+∘ 📍 *Ext*: Search
+∘ 🎬 *Duration*: ${timestamp}
+∘ 👁️ *Viewers*: ${views}
+∘ 🆙 *Uploaded*: ${ago}
+∘ ✍️ *Author*: ${author.name}
+∘ 🔗 *URL*: ${url}
+
+∘ 📝 *Description*: ${description.slice(0, 200)}...
+`;
+
+        // Mengirim gambar dengan caption tanpa انتظار الصورة
+        await conn.sendMessage(m.chat, { 
+            image: { url: thumbnail }, 
+            caption 
+        }, { quoted: m });
+
+        // إرسال الصوت كمرفق PTT بدون استخدام التدفق
+        const audioBuffer = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
+        const buffer = Buffer.from(audioBuffer.data);
+
+        // إرسال الصوت مباشرة على شكل PTT
+        await conn.sendMessage(m.chat, {
+            audio: buffer,
+            mimetype: 'audio/mpeg',
+            fileName: `${title}.mp3`,
+            ptt: true,
+            contextInfo: {
+                externalAdReply: {
+                    showAdAttribution: true,
+                    mediaType: 2,
+                    mediaUrl: url,
+                    title: title,
+                    body: 'Audio Download',
+                    sourceUrl: url,
+                    thumbnail: await (await conn.getFile(thumbnail)).data,
+                },
+            },
+        }, { quoted: m });
+
+    } catch (error) {
+        console.error('Error:', error.message);
+        throw `Error: ${error.message}. Coba ulangi lagi..`;
     }
-    if (global.videoList[0]?.from == m.sender) {
-      global.videoList.splice(0, global.videoList.length);
-    }
-    const results = await yts(text);
-    const textoInfo = `${tradutor.texto2[0]}
-◉ ${usedPrefix}audio <numero>
-◉ ${usedPrefix}video <numero> 
-
-${tradutor.texto2[1]}
-*◉ ${usedPrefix}audio 5*
-*◉ ${usedPrefix}video 8*`.trim();
-    const teks = results.all.map((v, i) => {
-      const link = v.url;
-      vids_.urls.push(link);
-      return `[${i + 1}] ${v.title}
-↳ ${tradutor.texto2[2]} ${v.url}
-↳ ${tradutor.texto2[3]}* ${v.timestamp}
-↳ ${tradutor.texto2[4]} ${v.ago}
-↳ ${tradutor.texto2[5]} ${v.views}`;
-    }).join('\n\n◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦◦\n\n');
-    conn.sendFile(m.chat, results.all[0].thumbnail, 'yts.jpeg', textoInfo + '\n\n' + teks, m);
-    global.videoList.push(vids_);
-  } catch {
-    await m.reply(`${tradutor.texto3}`);
-  }
 };
-handler.help = ['playlist *<texto>*'];
-handler.tags = ['search'];
-handler.command = /^playlist|playlist2$/i;
+
+handler.help = ['play'].map((v) => v + ' <query>');
+handler.tags = ['downloader'];
+handler.command = /^(ply)$/i;
+handler.register = false;
+handler.disable = false;
+
 export default handler;
