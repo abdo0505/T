@@ -1,79 +1,126 @@
-import axios from "axios";
-import yts from "yt-search";
+import yts from 'yt-search';
+import axios from 'axios';
+import fs from 'fs';
+import ffmpeg from 'fluent-ffmpeg';
+import path from 'path';
 
-const handler = async (m, { conn, usedPrefix, command, text }) => {
-    // Memastikan ada input teks
-    if (!text) {
-        throw `*• Contoh :* ${usedPrefix + command} *<query>*`;
-    }
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+  if (!text) throw `استخدام الأمر:\n${usedPrefix + command} <الكلمة المفتاحية>\n\nمثال:\n${usedPrefix + command} أغنية`;
 
-    m.reply(wait);
+  try {
+    conn.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
+    const videos = await search(text);
+    if (videos.length === 0) throw new Error('لم يتم العثور على نتائج.');
 
-    let videoUrl;
+    // اختيار أول فيديو
+    const video = videos[0];
+    const links = await downloadLinks(video.id);
 
-    // Mencari video berdasarkan teks
-    let result = await yts(text);
-    videoUrl = result.videos[0]?.url; // Ambil URL video pertama
-    if (!videoUrl) {
-        return m.reply("Tidak ada video ditemukan dengan pencarian tersebut.");
-    }
+    // التحقق من وجود جودة صوت MP3
+    if (!links.mp3['128kbps']) throw new Error('الصوت بجودة 128kbps غير متوفر.');
+    const audioLink = await links.mp3['128kbps']();
 
-    // Encode URL untuk digunakan dalam permintaan API
-    const encodedUrl = encodeURIComponent(videoUrl);
-    const apiUrl = `https://Ikygantengbangetanjay-api.hf.space/yt?query=${encodedUrl}`;
+    // إعداد النصوص مع معلومات الفيديو (بدون عدد المشاهدات)
+    const cap = `*乂 Y T M P 3 ♻️- P L A Y*\n\n` +
+                `◦ العنوان: ${video.title}\n` +
+                `◦ الرابط: ${video.url}`;
 
-    try {
-        console.log(`Mengirim permintaan ke API: ${apiUrl}`); // Log URL API
-        let response = await axios.get(apiUrl);
-        console.log(`Respons dari API:`, response.data); // Log respons dari API
+    // تحميل الصورة المصغرة
+    const imageUrl = `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`;
+    const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imageBuffer = Buffer.from(imageResponse.data, 'binary');
 
-        let data = response.data;
+    // إرسال الصورة مع النصوص
+    await conn.sendMessage(m.chat, {
+      image: imageBuffer,
+      caption: cap
+    }, { quoted: m });
 
-        // Memeriksa apakah hasil valid
-        if (!data.success || !data.result) {
-            return m.reply("Tidak ada hasil ditemukan.");
-        }
+    // تنزيل ملف الفيديو
+    const tempFilePath = `./src/tmp/${m.sender}`;
+    const inputPath = await downloadFile(audioLink.url, tempFilePath + '.mp4');
+    const outputPath = inputPath.replace(/\.[^.]+$/, '.mp3'); // استبدال الامتداد بـ mp3
 
-        let videoData = data.result;
-        let cap = `*乂 Y T M P 3 ♻️- P L A Y*\n\n` +
-                  `◦ Judul : ${videoData.title}\n` +
-                  `◦ Link Video : ${videoData.url}\n` +
-                  `◦ Durasi : ${videoData.timestamp}\n` +
-                  `◦ Penulis : ${videoData.author.name}\n` +
-                  `◦ Views : ${videoData.views}\n` +
-                  `◦ Diunggah : ${videoData.ago}`;
+    // تحويل الفيديو إلى MP3
+    await convertToMp3(inputPath, outputPath);
 
-        // تحميل الصورة من الرابط وتحويلها إلى Buffer
-        const imageUrl = "https://qu.ax/NkKUn.jpg";
-        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+    // إرسال ملف MP3
+    const mp3Buffer = fs.readFileSync(outputPath);
+    await conn.sendMessage(
+      m.chat,
+      { audio: mp3Buffer, fileName: `${video.title}.mp3`, mimetype: 'audio/mpeg' },
+      { quoted: m }
+    );
 
-        // إرسال الصورة مع النصوص
-        await conn.sendMessage(m.chat, {
-            image: imageBuffer,
-            caption: cap
-        }, { quoted: m });
-
-        // Mengunduh audio
-        const audioResponse = await axios.get(videoData.download.audio, { responseType: 'arraybuffer' });
-        const audioBuffer = Buffer.from(audioResponse.data, 'binary');
-
-        // Kirim audio sebagai pesan media
-        await conn.sendMessage(m.chat, {
-            audio: audioBuffer,
-            mimetype: 'audio/mpeg',
-            fileName: `${videoData.title}.mp3`,
-            caption: cap
-        }, { quoted: m });
-
-    } catch (error) {
-        console.error("Terjadi kesalahan:", error); // Log kesalahan
-        m.reply("Terjadi kesalahan saat memproses permintaan. Silakan periksa log untuk detail.");
-    }
+    // تنظيف الملفات المؤقتة
+    fs.unlinkSync(inputPath);
+    fs.unlinkSync(outputPath);
+  } catch (e) {
+    m.reply('خطأ: ' + e.message);
+  }
 };
 
-handler.help = ["ytmp3", "yta", "play"].map(a => a + " *[query]*");
+handler.help = ["yta <query>"];
 handler.tags = ["downloader"];
-handler.command = ["play"];
+handler.command = /^(ytmp3|yi)$/i;
 
 export default handler;
+
+// الدوال المساعدة
+const search = async (query) => {
+  const videos = await yts(query).then(v => v.videos);
+  return videos.map(({ videoId, url, title }) => ({
+    title, id: videoId, url,
+  }));
+};
+
+const downloadLinks = async (id) => {
+  const headers = {
+    Accept: "*/*",
+    Origin: "https://id-y2mate.com",
+    Referer: `https://id-y2mate.com/${id}`,
+    'User-Agent': 'Postify/1.0.0',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+
+  const response = await axios.post('https://id-y2mate.com/mates/analyzeV2/ajax', new URLSearchParams({
+    k_query: `https://youtube.com/watch?v=${id}`,
+    k_page: 'home',
+    q_auto: 0,
+  }), { headers });
+
+  if (!response.data || !response.data.links) throw new Error('لم يتم الحصول على رد من API.');
+
+  return Object.entries(response.data.links).reduce((acc, [format, links]) => {
+    acc[format] = Object.fromEntries(Object.values(links).map(option => [
+      option.q || option.f,
+      async () => {
+        const res = await axios.post('https://id-y2mate.com/mates/convertV2/index', new URLSearchParams({ vid: id, k: option.k }), { headers });
+        if (res.data.status !== 'ok') throw new Error('خطأ في التحويل.');
+        return { size: option.size, format: option.f, url: res.data.dlink };
+      }
+    ]));
+    return acc;
+  }, { mp3: {}, mp4: {} });
+};
+
+async function downloadFile(url, outputPath) {
+  const response = await axios({ url, method: 'GET', responseType: 'stream' });
+  const writer = fs.createWriteStream(outputPath);
+
+  return new Promise((resolve, reject) => {
+    response.data.pipe(writer);
+    writer.on('finish', () => resolve(outputPath));
+    writer.on('error', reject);
+  });
+}
+
+function convertToMp3(inputPath, outputPath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .toFormat('mp3')
+      .on('end', resolve)
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
