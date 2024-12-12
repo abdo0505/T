@@ -1,58 +1,85 @@
-import axios from "axios";
+import yts from 'yt-search';
+import axios from 'axios';
 
-const handler = async (m, { conn }) => {
+let handler = async (m, { conn }) => {
     // تعريف تعبير منتظم للتحقق من روابط يوتيوب
-    const urlRegex = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s]+$/i;
+    const urlRegex = /(?:https?:\/\/)?(?:www\.)?(youtube\.com|youtu\.be)\/[^\s]+/;
     const match = m.text.match(urlRegex);
 
-    if (!match) {
-        return; // لا يوجد رابط يوتيوب في الرسالة
-    }
-
-    const videoUrl = match[0];
-    await m.reply(wait);
+    if (!match) return; // إذا لم يتم العثور على رابط، لا يتم تنفيذ أي شيء
 
     try {
-        // استدعاء API للحصول على بيانات الفيديو
-        const apiUrl = `https://Ikygantengbangetanjay-api.hf.space/yt?query=${encodeURIComponent(videoUrl)}`;
-        console.log(`إرسال طلب إلى API: ${apiUrl}`);
-        const { data } = await axios.get(apiUrl);
-        console.log(`استجابة API:`, data);
+        conn.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
 
-        // التحقق من استجابة API
-        if (!data.success || !data.result) {
-            return m.reply("حدث خطأ أثناء جلب معلومات الفيديو. حاول لاحقًا.");
-        }
+        // استخراج معرف الفيديو من الرابط
+        const videoId = extractVid(match[0]);
+        if (!videoId) throw new Error('الرابط غير صالح.');
 
-        const videoData = data.result;
-        const caption = `*乂 Y T M P 4 🩵 D O W N L O A D*\n\n` +
-                        `◦ العنوان : ${videoData.title}\n` +
-                        `◦ المدة : ${videoData.timestamp}\n` +
-                        `◦ الكاتب : ${videoData.author.name}\n` +
-                        `◦ المشاهدات : ${videoData.views}\n` +
-                        `◦ منذ : ${videoData.ago}`;
+        // جلب معلومات الفيديو
+        const links = await downloadLinks(videoId);
 
-        // تنزيل الفيديو
-        const videoResponse = await axios.get(videoData.download.video, { responseType: 'arraybuffer' });
-        const videoBuffer = Buffer.from(videoResponse.data, 'binary');
+        // التحقق من وجود جودة 360p
+        if (!links.mp4['360p']) throw new Error('فيديو بجودة 360p غير متوفر.');
+        const videoLink = await links.mp4['360p']();
 
-        // إرسال الفيديو للمستخدم
-        await conn.sendMessage(m.chat, {
-            video: videoBuffer,
-            mimetype: 'video/mp4',
-            fileName: `${videoData.title}.mp4`,
-            caption: caption
-        }, { quoted: m });
+        await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
 
-    } catch (error) {
-        console.error("حدث خطأ أثناء تنزيل الفيديو:", error);
-        m.reply("حدث خطأ أثناء تنزيل الفيديو. حاول لاحقًا.");
+        // إرسال الفيديو مباشرة
+        await conn.sendFile(
+            m.chat,
+            videoLink.url,
+            `${videoId}.mp4`,
+            `*تم التنزيل بنجاح:*`,
+            m,
+            null,
+            {
+                mimetype: 'video/mp4',
+            }
+        );
+    } catch (e) {
+        m.reply('خطأ: ' + e.message);
     }
 };
 
-// تعريف الأوامر والعلامات
+// الدوال المساعدة
+const extractVid = (data) => {
+    const match = /(?:youtu\.be\/|youtube\.com(?:.*[?&]v=|.*\/))([^?&]+)/.exec(data);
+    return match ? match[1] : null;
+};
+
+const downloadLinks = async (id) => {
+    const headers = {
+        Accept: "*/*",
+        Origin: "https://id-y2mate.com",
+        Referer: `https://id-y2mate.com/${id}`,
+        'User-Agent': 'Postify/1.0.0',
+        'X-Requested-With': 'XMLHttpRequest',
+    };
+
+    const response = await axios.post('https://id-y2mate.com/mates/analyzeV2/ajax', new URLSearchParams({
+        k_query: `https://youtube.com/watch?v=${id}`,
+        k_page: 'home',
+        q_auto: 0,
+    }), { headers });
+
+    if (!response.data || !response.data.links) throw new Error('لم يتم الحصول على رد من API.');
+
+    return Object.entries(response.data.links).reduce((acc, [format, links]) => {
+        acc[format] = Object.fromEntries(Object.values(links).map(option => [
+            option.q || option.f, 
+            async () => {
+                const res = await axios.post('https://id-y2mate.com/mates/convertV2/index', new URLSearchParams({ vid: id, k: option.k }), { headers });
+                if (res.data.status !== 'ok') throw new Error('خطأ في التحويل.');
+                return { size: option.size, format: option.f, url: res.data.dlink };
+            }
+        ]));
+        return acc;
+    }, { mp3: {}, mp4: {} });
+};
+
+// إعدادات المعالج
 handler.tags = ["downloader"];
-handler.customPrefix = /https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i;
+handler.customPrefix = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/[^\s]+/; // تشغيل تلقائي عند وجود رابط يوتيوب
 handler.command = new RegExp;
 
 export default handler;
