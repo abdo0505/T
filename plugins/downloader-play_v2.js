@@ -1,191 +1,155 @@
-/*
+import axios from 'axios';
+import yts from 'yt-search'; // مكتبة البحث
+import fs from 'fs';
+import path from 'path';
 
-- Agradecimiento a la comunidad de "WSApp • Developers"
- * https://chat.whatsapp.com/FaQunmlp9BmDRk6lEEc9FJ
-- Agradecimiento especial a Carlos (PT) por los codigos de interactiveMessage (botones)
-- Agradecimiento a Darlyn1234 por la estructura de uso en este codigo y quoted
- * https://github.com/darlyn1234
-- Adaptacion de imagen en tipo lista, codigo y funcionamiento por BrunoSobrino
- * https://github.com/BrunoSobrino
+class Fuck extends Error {
+    constructor(msg) {
+        super(msg);
+        this.name = "Fuck";
+    }
+}
 
-*/
-import fetch from 'node-fetch';
-import { prepareWAMessageMedia, generateWAMessageFromContent, getDevice } from "baileys";
+class API {
+    constructor(details, downloads) {
+        this.endpoints = { info: details, download: downloads };
+    }
 
-let data;
-let buff;
-let mimeType;
-let fileName;
-let apiUrl;
-let apiUrl2;
-let apiUrlsz;
-let device;
-let dataMessage;
-let enviando = false;
-const handler = async (m, { command, usedPrefix, conn, text }) => {
-  const datas = global;
-  const idioma = datas.db.data.users[m.sender].language || global.defaultLenguaje;
-  const _translate = JSON.parse(fs.readFileSync(`./src/languages/${idioma}.json`));
-  const tradutor = _translate.plugins.descargas_play_v2;
-  device = await getDevice(m.key.id);
+    headers(custom = {}) {
+        return {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Postify/1.0.0',
+            'Referer': 'https://ytiz.xyz/',
+            ...custom
+        };
+    }
 
-  if (!text) throw `${tradutor.texto1[0]} _${usedPrefix + command} ${tradutor.texto1[1]} _${usedPrefix + command} https://youtu.be/JLWRZ8eWyZo?si=EmeS9fJvS_OkDk7p_`;
-  if (command === 'playyt' && (device == 'desktop' || device == 'web')) throw `*[❗] Los mensajes de botones aun no estan disponibles en WhatsApp web, acceda a su celular para poder ver y usar los mensajes con botones.*`;
-  if (enviando) return;
-  enviando = true;
+    handleError(error, context) {
+        const errors = error.response ? JSON.stringify(error.response.data || error.errors) : error.errors;
+        console.error(`Error in ${context}:`, errors);
+        throw new Fuck(errors);
+    }
+}
 
-  try {
-    apiUrlsz = [
-      `https://api.cafirexos.com/api/ytplay?text=${text}`,
-      `https://api-brunosobrino.onrender.com/api/ytplay?text=${text}&apikey=BrunoSobrino`,
-      `https://api-brunosobrino-dcaf9040.koyeb.app/api/ytplay?text=${text}`
-    ];
-    const linkyt = await isValidYouTubeLink(text);
-    if (linkyt) apiUrlsz = [
-        `https://api.cafirexos.com/api/ytinfo?url=${text}`,
-        `https://api-brunosobrino-koiy.onrender.com/api/ytinfo?url=${text}&apikey=BrunoSobrino`,
-        `https://api-brunosobrino-dcaf9040.koyeb.app/api/ytinfo?url=${text}`
-    ];
-    let success = false;
-    for (const url of apiUrlsz) {
-      try {
-        const res = await fetch(url);
-        data = await res.json();
-        if (data.resultado && data.resultado.url) {
-          success = true;
-          break;
+class YTMP3 extends API {
+    constructor() { 
+        super('https://m8.fly.dev/api/info', 'https://m8.fly.dev/api/download'); 
+    }
+
+    async request(endpoint, payload) {
+        try {
+            const { data } = await axios.post(this.endpoints[endpoint], payload, { headers: this.headers() });
+            return data;
+        } catch (error) { 
+            this.handleError(error, endpoint); 
         }
-      } catch {}
     }
 
-    if (!success) {
-      enviando = false;
-      throw `${tradutor.texto2}`;
+    async fetchDetails(videoUrl, format) {
+        return this.request('info', { url: videoUrl, format, startTime: 0, endTime: 0 });
     }
 
-    const dataMessage = `${tradutor.texto4[0]} ${data.resultado.title}\n${tradutor.texto4[1]} ${data.resultado.publicDate}\n${tradutor.texto4[2]} ${data.resultado.channel}\n${tradutor.texto4[3]} ${data.resultado.url}`.trim();  
-    if (!text.includes('SN@') && command !== 'playyt') await conn.sendMessage(m.chat, { text: dataMessage }, { quoted: m });      
-      
-    if (command === 'playyt') {
-      var messa = await prepareWAMessageMedia({ image: {url: data.resultado.image}}, { upload: conn.waUploadToServer });
-      let msg = generateWAMessageFromContent(m.chat, {
-          viewOnceMessage: {
-              message: {
-                  interactiveMessage: {
-                      body: { text: dataMessage },
-                      footer: { text: `${global.wm}`.trim() },
-                      header: {
-                          hasMediaAttachment: true,
-                          imageMessage: messa.imageMessage,
-                      },
-                      nativeFlowMessage: {
-                          buttons: [
-                              {
-                                  name: 'quick_reply',
-                                  buttonParamsJson: JSON.stringify({
-                                      display_text: 'AUDIO',
-                                      id: `${usedPrefix}play.1 ${data.resultado.url} SN@`
-                                  })
-                              },
-                              {
-                                  name: 'quick_reply',
-                                  buttonParamsJson: JSON.stringify({
-                                      display_text: 'VIDEO',
-                                      id: `${usedPrefix}play.2 ${data.resultado.url} SN@`
-                                  })
-                              },   
-                          ],
-                          messageParamsJson: "",
-                      },
-                  },
-              },
-          }
-      }, { userJid: conn.user.jid, quoted: m});
-      await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id});
-      enviando = false;    
-      return;
-    }    
+    async downloadAudio(videoUrl, quality, filename, randomID, format) {
+        return this.request('download', {
+            url: videoUrl,
+            quality,
+            metadata: true,
+            filename,
+            randID: randomID,
+            trim: false,
+            startTime: 0,
+            endTime: 0,
+            format
+        });
+    }
+
+    validParams(format, quality) {
+        const formats = ['m4a', 'mp3', 'flac'];
+        const qualities = ['32', '64', '128', '192', '256', '320'];
+
+        if (!formats.includes(format)) {
+            throw new Error(`Salah! Pilih salah satu opsi ini : ${formats.join(', ')}`);
+        }
+
+        if (!qualities.includes(quality)) {
+            throw new Error(`Salah! Pilih salah satu opsi ini : ${qualities.join(', ')}`);
+        }
+    }
+
+    async exec(videoUrl, format = 'mp3') {
+        const quality = '32';  // تحديد الجودة لتكون 32 فقط
+
+        const videoInfo = await this.fetchDetails(videoUrl, format);
+        const audioData = await this.downloadAudio(videoUrl, quality, videoInfo.filename, videoInfo.randID, format);
+        console.log(audioData);
+
+        // إرسال الطلب للحصول على بيانات الفيديو
+        const response = await axios.post('https://m8.fly.dev/api/file_send', {
+            filepath: audioData.filepath,
+            randID: audioData.randID
+        }, { responseType: 'arraybuffer' });
+
+        return {
+            buffer: Buffer.from(response.data), // إرجاع بيانات الصوت
+            thumbnail: videoInfo.thumbnail, // تضمين صورة الفيديو المصغرة
+            title: videoInfo.title // تضمين عنوان الفيديو
+        };
+    }
+
+    static async download(videoUrl, format = 'mp3') {
+        const downloader = new YTMP3();
+        return await downloader.exec(videoUrl, format).catch(err => {
+            console.error(err.errors);
+        });
+    }
+}
+
+// Handler function for WhatsApp bot
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+    if (!text) throw `استخدام الأمر: ${usedPrefix + command} <الكلمة المفتاحية>`;
 
     try {
-      if (command === 'play.1') {
-        let apiUrls2 = [
-          `https://api.cafirexos.com/api/v1/ytmp3?url=${data.resultado.url}`,
-          `https://api.cafirexos.com/api/v2/ytmp3?url=${data.resultado.url}`,
-          `https://api-brunosobrino.onrender.com/api/v1/ytmp3?url=${data.resultado.url}&apikey=BrunoSobrino`,
-          `https://api-brunosobrino.onrender.com/api/v2/ytmp3?url=${data.resultado.url}&apikey=BrunoSobrino`,
-          `https://api-brunosobrino-dcaf9040.koyeb.app/api/v1/ytmp3?url=${data.resultado.url}`,
-          `https://api-brunosobrino-dcaf9040.koyeb.app/api/v2/ytmp3?url=${data.resultado.url}`,
-        ];
+        conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } });
+        
+        // البحث عن الفيديو باستخدام yt-search
+        const { videos } = await yts(text.trim());  // البحث عن الفيديوهات باستخدام الكلمة المفتاحية
+        if (videos.length === 0) throw 'لم يتم العثور على أي فيديوهات للبحث عن الكلمة المفتاحية.';
 
-        let success2 = false;
-        for (const urll of apiUrls2) {
-          try {
-            apiUrl2 = urll;
-            mimeType = 'audio/mpeg';
-            fileName = 'error.mp3';
-            buff = await conn.getFile(apiUrl2);
-            success2 = true;
-            break;
-          } catch {}
-        }
+        // أخذ أول فيديو مقترح
+        const videoUrl = videos[0].url;
+        const format = 'mp3';  // التنسيق الافتراضي يمكن تعديله
 
-        if (!success2) {
-          enviando = false;
-          throw `${tradutor.texto3}`;
-        }
-      } else if (command === 'play.2') {
-        let apiUrls22 = [
-          `https://api.cafirexos.com/api/v1/ytmp4?url=${data.resultado.url}`,
-          `https://api.cafirexos.com/api/v2/ytmp4?url=${data.resultado.url}`,            
-          `https://api-brunosobrino.onrender.com/api/v1/ytmp4?url=${data.resultado.url}&apikey=BrunoSobrino`,
-          `https://api-brunosobrino.onrender.com/api/v2/ytmp4?url=${data.resultado.url}&apikey=BrunoSobrino`,
-          `https://api-brunosobrino-dcaf9040.koyeb.app/api/v1/ytmp4?url=${data.resultado.url}`,
-          `https://api-brunosobrino-dcaf9040.koyeb.app/api/v2/ytmp4?url=${data.resultado.url}`,
-        ];
+        // تحميل الفيديو باستخدام الرابط الأول الذي تم الحصول عليه
+        const { buffer: audioBuffer, thumbnail, title } = await YTMP3.download(videoUrl, format);
 
-        let success2 = false;
-        for (const urlll of apiUrls22) {
-          try {
-            apiUrl2 = urlll;
-            mimeType = 'video/mp4';
-            fileName = 'error.mp4';
-            buff = await conn.getFile(apiUrl2);
-            success2 = true;
-            break;
-          } catch (e) {
-             console.log(e.message) 
-          }
-        }
+        if (!audioBuffer) throw '❌ فشل تحميل الصوت!';
 
-        if (!success2) {
-          enviando = false;
-          throw `${tradutor.texto3}`;
-        }
-      }
-    } catch (ee) {
-      console.log(ee.message)  
-      enviando = false;
-      throw `${tradutor.texto3}`;
+        const doc = {
+            audio: audioBuffer,
+            mimetype: 'audio/mp4', // تغيير mimetype إذا لزم الأمر
+            fileName: `${title}`,
+            contextInfo: {
+                externalAdReply: {
+                    showAdAttribution: true,
+                    mediaType: 2,
+                    mediaUrl: videoUrl,
+                    title: title,
+                    sourceUrl: videoUrl,
+                    thumbnail: await (await conn.getFile(thumbnail)).data
+                }
+            }
+        };
+
+        await conn.sendMessage(m.chat, doc, { quoted: m });
+
+    } catch (e) {
+        console.error(e);
+        throw '❌ فشل في تنزيل الصوت!';
     }
-
-    if (buff) {
-      await conn.sendMessage(m.chat, {[mimeType.startsWith('audio') ? 'audio' : 'video']: buff.data, mimetype: mimeType, fileName: fileName}, {quoted: m});
-      enviando = false;
-    } else {
-      enviando = false;
-      throw `${tradutor.texto5}`;
-    }
-  } catch (error) {
-    console.log(error);  
-    enviando = false;
-    throw tradutor.texto6;
-  }
-};
-
-handler.command = /^(play.1|play.2|playyt)$/i;
-export default handler;
-
-async function isValidYouTubeLink(link) {
-    const validPatterns = [/youtube\.com\/watch\?v=/i, /youtube\.com\/shorts\//i, /youtu\.be\//i, /youtube\.com\/embed\//i, /youtube\.com\/v\//i, /youtube\.com\/attribution_link\?a=/i, /yt\.be\//i, /googlevideo\.com\//i, /youtube\.com\.br\//i, /youtube-nocookie\.com\//i, /youtubeeducation\.com\//i, /m\.youtube\.com\//i, /youtubei\.googleapis\.com\//i];
-    return validPatterns.some(pattern => pattern.test(link));
 }
+
+handler.help = ["ytmp3"];
+handler.tags = ["downloader"];
+handler.command = ['play2'];
+
+export default handler;
