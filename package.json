@@ -53,6 +53,7 @@
 
 "play-dl" : "*" ,
     "colors": "1.4.0",
+"canvas": "*" ,
 "download.js" :  "*",
 "path": "*",
 "ruhend-scraper": "*",
