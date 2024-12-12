@@ -77,7 +77,7 @@ class YTMP3 extends API {
     }
 
     async exec(videoUrl, format = 'mp3') {
-        const quality = '32';  // تحديد الجودة لتكون 32 فقط
+        const quality = '128';  // تحديد الجودة لتكون 32 فقط
 
         const videoInfo = await this.fetchDetails(videoUrl, format);
         const audioData = await this.downloadAudio(videoUrl, quality, videoInfo.filename, videoInfo.randID, format);
