@@ -49,7 +49,7 @@ async function NourPair(number, img, m, conn) {
             await delay(1500);
             number = number.replace(/[^0-9]/g, '');
             const code = await NourSock.requestPairingCode(number);  
-            await conn.sendMessage(m.chat, { text: ${code}` });
+            await conn.sendMessage(m.chat, { text: `${code}` });
         }
 
         NourSock.ev.on('creds.update', saveCreds);
