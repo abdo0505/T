@@ -150,6 +150,6 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
 
 handler.help = ["ytmp3"];
 handler.tags = ["downloader"];
-handler.command = ['ply'];
+handler.command = ['play'];
 
 export default handler;
