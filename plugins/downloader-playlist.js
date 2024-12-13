@@ -67,7 +67,7 @@ const handler = async (m, { conn, command, text, usedPrefix }) => {
 
 handler.help = ['play'].map((v) => v + ' <query>');
 handler.tags = ['downloader'];
-handler.command = /^(plo)$/i;
+handler.command = /^plo$/i;
 handler.register = false;
 handler.disable = false;
 
