@@ -38,9 +38,8 @@ const handler = async (m, { conn, command, text, usedPrefix }) => {
 
 handler.help = ['play'].map((v) => v + ' <query>');
 handler.tags = ['downloader'];
-handler.command = /^(ppy)$/i;
+handler.command = /^(play)$/i;
 
-handler.limit = 8;
 handler.register = false;
 handler.disable = false;
 
