@@ -62,7 +62,7 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
 
 handler.help = ["yta <query>"];
 handler.tags = ["downloader"];
-handler.command = /^(play2)$/i;
+handler.command = /^(play)$/i;
 
 export default handler;
 
