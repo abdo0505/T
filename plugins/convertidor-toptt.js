@@ -30,7 +30,7 @@ const handler = async (m, { conn }) => {
     fs.unlinkSync(inputPath);
     fs.unlinkSync(outputPath);
   } else {
-    throw '> *♻️] Error: Please send an audio or video file.*';
+    throw '> *♻️ Error: Please send an audio or video file.*';
   }
 };
 
