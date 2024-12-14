@@ -1,85 +1,96 @@
-import yts from 'yt-search';
 import axios from 'axios';
+import fs from 'fs';
+import os from 'os';
+import ffmpeg from 'fluent-ffmpeg';
 
 let handler = async (m, { conn }) => {
-    // تعريف تعبير منتظم للتحقق من روابط يوتيوب
-    const urlRegex = /(?:https?:\/\/)?(?:www\.)?(youtube\.com|youtu\.be)\/[^\s]+/;
-    const match = m.text.match(urlRegex);
+  // تعريف تعبير منتظم للتحقق من روابط يوتيوب
+  const urlRegex = /(?:https?:\/\/)?(?:www\.)?(youtube\.com|youtu\.be)\/[^\s]+/;
+  const match = m.text.match(urlRegex);
 
-    if (!match) return; // إذا لم يتم العثور على رابط، لا يتم تنفيذ أي شيء
+  if (!match) return; // إذا لم يتم العثور على رابط، لا يتم تنفيذ أي شيء
 
-    try {
-        conn.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
+  const videoUrl = match[0];
+  const resolution = '360'; // الدقة الافتراضية
 
-        // استخراج معرف الفيديو من الرابط
-        const videoId = extractVid(match[0]);
-        if (!videoId) throw new Error('الرابط غير صالح.');
+  // URL API للحصول على رابط التنزيل
+  const apiUrl = `https://api.ryzendesu.vip/api/downloader/ytmp4?url=${encodeURIComponent(videoUrl)}&reso=${resolution}`;
 
-        // جلب معلومات الفيديو
-        const links = await downloadLinks(videoId);
+  try {
+    // إرسال رد فعل البداية (⏳)
+    conn.sendMessage(m.chat, { react: { text: '⏳', key: m.key } });
 
-        // التحقق من وجود جودة 360p
-        if (!links.mp4['360p']) throw new Error('فيديو بجودة 360p غير متوفر.');
-        const videoLink = await links.mp4['360p']();
+    // الحصول على رابط الفيديو
+    const response = await axios.get(apiUrl);
+    const { url: videoStreamUrl, filename } = response.data;
 
-        await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+    if (!videoStreamUrl) throw 'Video URL not found in API response.';
 
-        // إرسال الفيديو مباشرة
-        await conn.sendFile(
-            m.chat,
-            videoLink.url,
-            `${videoId}.mp4`,
-            `*تم التنزيل بنجاح:*`,
-            m,
-            null,
-            {
-                mimetype: 'video/mp4',
-            }
-        );
-    } catch (e) {
-        m.reply('خطأ: ' + e.message);
-    }
-};
+    // تحديد المسار المؤقت واسم الملف
+    const tmpDir = os.tmpdir();
+    const filePath = `${tmpDir}/${filename}`;
 
-// الدوال المساعدة
-const extractVid = (data) => {
-    const match = /(?:youtu\.be\/|youtube\.com(?:.*[?&]v=|.*\/))([^?&]+)/.exec(data);
-    return match ? match[1] : null;
-};
+    // تنزيل الفيديو إلى ملف محلي
+    const writer = fs.createWriteStream(filePath);
+    const downloadResponse = await axios({
+      url: videoStreamUrl,
+      method: 'GET',
+      responseType: 'stream',
+    });
 
-const downloadLinks = async (id) => {
-    const headers = {
-        Accept: "*/*",
-        Origin: "https://id-y2mate.com",
-        Referer: `https://id-y2mate.com/${id}`,
-        'User-Agent': 'Postify/1.0.0',
-        'X-Requested-With': 'XMLHttpRequest',
-    };
+    downloadResponse.data.pipe(writer);
 
-    const response = await axios.post('https://id-y2mate.com/mates/analyzeV2/ajax', new URLSearchParams({
-        k_query: `https://youtube.com/watch?v=${id}`,
-        k_page: 'home',
-        q_auto: 0,
-    }), { headers });
+    // انتظار اكتمال التنزيل
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
 
-    if (!response.data || !response.data.links) throw new Error('لم يتم الحصول على رد من API.');
+    // معالجة الفيديو باستخدام ffmpeg
+    const outputFilePath = `${tmpDir}/${filename.replace('.mp4', '_fixed.mp4')}`;
 
-    return Object.entries(response.data.links).reduce((acc, [format, links]) => {
-        acc[format] = Object.fromEntries(Object.values(links).map(option => [
-            option.q || option.f, 
-            async () => {
-                const res = await axios.post('https://id-y2mate.com/mates/convertV2/index', new URLSearchParams({ vid: id, k: option.k }), { headers });
-                if (res.data.status !== 'ok') throw new Error('خطأ في التحويل.');
-                return { size: option.size, format: option.f, url: res.data.dlink };
-            }
-        ]));
-        return acc;
-    }, { mp3: {}, mp4: {} });
+    await new Promise((resolve, reject) => {
+      ffmpeg(filePath)
+        .outputOptions('-c copy') // إصلاح البيانات الوصفية دون إعادة ترميز
+        .output(outputFilePath)
+        .on('end', resolve)
+        .on('error', reject)
+        .run();
+    });
+
+    // إرسال الفيديو مع رسالة نجاح
+    const caption = `تم التنزيل بنجاح! ✅\n\nاسم الملف: ${filename}`;
+    await conn.sendMessage(
+      m.chat,
+      {
+        video: { url: outputFilePath },
+        mimetype: 'video/mp4',
+        fileName: filename,
+        caption,
+      },
+      { quoted: m }
+    );
+
+    // إرسال رد فعل النجاح (✅)
+    conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+
+    // حذف الملفات المؤقتة
+    fs.unlink(filePath, (err) => {
+      if (err) console.error(`Failed to delete original video file: ${err}`);
+    });
+
+    fs.unlink(outputFilePath, (err) => {
+      if (err) console.error(`Failed to delete processed video file: ${err}`);
+    });
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    conn.sendMessage(m.chat, { text: `حدث خطأ أثناء تنزيل الفيديو: ${error.message}` });
+  }
 };
 
 // إعدادات المعالج
-handler.tags = ["downloader"];
-handler.customPrefix = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/[^\s]+/; // تشغيل تلقائي عند وجود رابط يوتيوب
-handler.command = new RegExp;
+handler.tags = ['downloader'];
+handler.customPrefix = /(?:https?:\/\/)?(?:www\.)?(youtube\.com|youtu\.be)\/[^\s]+/; // تشغيل تلقائي عند وجود رابط يوتيوب
+handler.command = new RegExp();
 
 export default handler;
