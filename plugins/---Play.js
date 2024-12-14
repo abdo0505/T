@@ -24,7 +24,7 @@ const handler = async (m, { conn, command, text, usedPrefix }) => {
 
     if (!downloadUrl) throw new Error('Audio URL not found');
 
-    // إرسال الصوت مباشرة من البث
+    // إرسال الصوت مباشرة كـ PTT (Voice Note)
     await conn.sendMessage(m.chat, {
       audio: { url: downloadUrl },
       mimetype: 'audio/mpeg',
@@ -38,7 +38,7 @@ const handler = async (m, { conn, command, text, usedPrefix }) => {
 
 handler.help = ['play'].map((v) => v + ' <query>');
 handler.tags = ['downloader'];
-handler.command = /^(play)$/i;
+handler.command = /^(py)$/i;
 
 handler.register = false;
 handler.disable = false;
