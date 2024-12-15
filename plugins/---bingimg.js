@@ -11,9 +11,9 @@ export const handler = async (m, {
   } else if (m.quoted && m.quoted.text) {
     text = m.quoted.text;
   } else {
-    throw "*تخيل والبوت يرسم  مثال 😉:*\n .bingimg cat play with man";
+    throw "*تخيل والبوت يرسم  مثال 🙈:*\n .bingimg cat play with man";
   }
-  await m.reply("المرجو الانتظار سنحاول رسم صورتك ...\n *JEEN-MD*");
+  await m.reply(wait);
   try {
     const res = new BingImageCreator({
       cookie: ""
@@ -23,7 +23,7 @@ export const handler = async (m, {
       for (let i = 0; i < data.length; i++) {
         try {
           if (!data[i].endsWith(".svg")) {
-            await conn.sendFile(m.chat, data[i], "", `😎 *(${i + 1}/${data.length})*\n\n*Prompt*: ${text}`, m, false, {
+            await conn.sendFile(m.chat, data[i], "", `🩵 *(${i + 1}/${data.length})*\n\n*Prompt*: ${text}`, m, false, {
               mentions: [m.sender]
             });
           }
