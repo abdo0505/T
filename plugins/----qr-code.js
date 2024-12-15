@@ -27,7 +27,7 @@ let handler = async (m, {
 
 handler.help = ['aio']
 handler.tags = ['downloader']
-handler.command = /^(ao)$/i
+handler.command = /^(a)$/i
 handler.limit = false 
 handler.register = false 
 
