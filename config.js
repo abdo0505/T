@@ -15,7 +15,7 @@ global.isBaileysFail = false
 
 global.defaultLenguaje = 'ar';
 
-global.owner = ['212697516526'];
+global.owner = ['212641207087'];
 
 global.suittag = ['5219993404349'];
 global.prems = ['51995386439'];
@@ -24,9 +24,9 @@ global.prems = ['51995386439'];
 global.BASE_API_DELIRIUS = "https://deliriusapi-official.vercel.app";
 
 global.packname = 'Sticker';
-global.author = 'The Mystic - Bot';
+global.author = 'Jeen - Bot';
 global.wm = 'The Mystic - Bot';
-global.titulowm = 'The Mystic - Bot';
+global.titulowm = 'Jeen - Bot';
 global.titulowm2 = `The Mystic - Bot`
 global.igfg = 'The Mystic - Bot';
 global.wait = '> *_جاري التحميل●●●○○ 💠 WAIT❄️_*';
