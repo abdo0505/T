@@ -13,7 +13,7 @@ global.authFile = `MysticSession`;
 // Error de m.isBaileys marcado como false fix temporal
 global.isBaileysFail = false
 
-global.defaultLenguaje = 'ar';
+global.defaultLenguaje = 'en';
 
 global.owner = ['212641207087'];
 
@@ -25,10 +25,10 @@ global.BASE_API_DELIRIUS = "https://deliriusapi-official.vercel.app";
 
 global.packname = 'Sticker';
 global.author = 'Jeen - Bot';
-global.wm = 'The Mystic - Bot';
+global.wm = 'Jeen - Bot';
 global.titulowm = 'Jeen - Bot';
-global.titulowm2 = `The Mystic - Bot`
-global.igfg = 'The Mystic - Bot';
+global.titulowm2 = `Jeen - Bot`
+global.igfg = 'Jeen - Bot';
 global.wait = '> *_جاري التحميل●●●○○ 💠 WAIT❄️_*';
 
 /*global.imagen1 = fs.createReadStream('./src/assets/images/menu/languages/es/menu.png');
@@ -55,8 +55,8 @@ global.año = d.toLocaleDateString('es', {year: 'numeric'});
 global.tiempo = d.toLocaleString('en-US', {hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true});
 //* ****************************
 global.wm2 = `${dia} ${fecha}\nThe Mystic - Bot`;
-global.gt = 'The Mystic - Bot';
-global.mysticbot = 'The Mystic - Bot';
+global.gt = 'Jeen - Bot';
+global.mysticbot = 'Jeen - Bot';
 global.channel = 'https://whatsapp.com/channel/0029Vaein6eInlqIsCXpDs3y';
 global.md = 'https://github.com/BrunoSobrino/TheMystic-Bot-MD';
 global.mysticbot = 'https://github.com/BrunoSobrino/TheMystic-Bot-MD';
