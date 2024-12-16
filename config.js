@@ -15,7 +15,7 @@ global.isBaileysFail = false
 
 global.defaultLenguaje = 'en';
 
-global.owner = ['212641207087,212641207087'];
+global.owner = ['212641207087'];
 
 global.suittag = ['212641207087'];
 global.prems = ['212641207087'];
