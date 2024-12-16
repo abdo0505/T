@@ -15,10 +15,10 @@ global.isBaileysFail = false
 
 global.defaultLenguaje = 'en';
 
-global.owner = ['212641207087'];
+global.owner = ['212641207087,212641207087'];
 
-global.suittag = ['5219993404349'];
-global.prems = ['51995386439'];
+global.suittag = ['212641207087'];
+global.prems = ['212641207087'];
 
 // API
 global.BASE_API_DELIRIUS = "https://deliriusapi-official.vercel.app";
